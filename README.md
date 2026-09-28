@@ -410,7 +410,6 @@ page). The Docker image builds this automatically in a dedicated Node stage.
 │   ├── retrieval/    # Qdrant-backed retriever (RRF fusion)
 │   ├── schemas/      # Pydantic config and request models
 │   └── vectordb/     # Qdrant vector store wrapper
-├── docs/             # Documentation and the pipeline diagram
 ├── models/           # SapBERT weights (downloaded in Step 1)
 ├── data/             # Input data files
 ├── main.py           # Interactive CLI entrypoint
