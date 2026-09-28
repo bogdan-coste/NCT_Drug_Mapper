@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bogdan Coste — Curriculum Vitae</title>
+<style>
+  /* ─────────────────────────────────────────────
+     Page setup
+     ───────────────────────────────────────────── */
+  :root {
+    --ink:        #1b1b1b;
+    --ink-soft:   #3d3d3d;
+    --muted:      #6d6a66;
+    --rule:       #d9d4c9;
+    --accent:     #a51c30;   /* Harvard crimson */
+    --paper:      #ffffff;
+    --backdrop:   #ece8e0;
+    --serif:      Georgia, "Times New Roman", "Iowan Old Style", serif;
+    --sans:       "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    padding: 2.5rem 1rem 4rem;
+    background: var(--backdrop);
+    font-family: var(--serif);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .page {
+    max-width: 8.5in;
+    margin: 0 auto;
+    background: var(--paper);
+    padding: 3.25rem 3.5rem 3.5rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08),
+                0 12px 40px rgba(0,0,0,.14);
+  }
+
+  /* ─────────────────────────────────────────────
+     Masthead
+     ───────────────────────────────────────────── */
+  .masthead {
+    text-align: center;
+    padding-bottom: 1.15rem;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 1.6rem;
+  }
+
+  .name {
+    font-family: var(--serif);
+    font-size: 2.55rem;
+    font-weight: 400;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    margin: 0 0 .55rem;
+    line-height: 1.1;
+  }
+
+  .name::after {
+    content: "";
+    display: block;
+    width: 62px;
+    height: 1px;
+    background: var(--ink);
+    opacity: .35;
+    margin: .75rem auto 0;
+  }
+
+  .tagline {
+    font-family: var(--sans);
+    font-size: .74rem;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 .7rem;
+  }
+
+  .contact {
+    font-family: var(--sans);
+    font-size: .78rem;
+    letter-spacing: .045em;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .contact a {
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .contact .sep {
+    display: inline-block;
+    margin: 0 .55em;
+    color: var(--rule);
+  }
+
+  /* ─────────────────────────────────────────────
+     Sections
+     ───────────────────────────────────────────── */
+  section { margin-bottom: 1.75rem; }
+
+  h2 {
+    font-family: var(--sans);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .21em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 .85rem;
+    padding-bottom: .34rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  p { margin: 0 0 .7rem; }
+
+  .lede {
+    text-align: justify;
+    hyphens: auto;
+    color: var(--ink-soft);
+  }
+
+  /* ─────────────────────────────────────────────
+     Entries
+     ───────────────────────────────────────────── */
+  .entry { margin-bottom: 1.15rem; }
+  .entry:last-child { margin-bottom: 0; }
+
+  .entry-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1.25rem;
+  }
+
+  .entry-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: .005em;
+    margin: 0;
+  }
+
+  .entry-org {
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: .95rem;
+  }
+
+  .entry-org .dot {
+    font-style: normal;
+    color: var(--rule);
+    margin: 0 .45em;
+  }
+
+  .entry-dates {
+    font-family: var(--sans);
+    font-size: .7rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-top: .18rem;
+  }
+
+  .entry-meta {
+    font-family: var(--sans);
+    font-size: .73rem;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin: .15rem 0 .45rem;
+  }
+
+  .entry-meta a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .entry-meta a:hover { border-bottom-color: var(--accent); }
+
+  /* ─────────────────────────────────────────────
+     Bullet lists
+     ───────────────────────────────────────────── */
+  ul.bullets {
+    list-style: none;
+    margin: .45rem 0 0;
+    padding: 0;
+  }
+
+  ul.bullets li {
+    position: relative;
+    padding-left: 1.05rem;
+    margin-bottom: .34rem;
+    color: var(--ink-soft);
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  ul.bullets li::before {
+    content: "";
+    position: absolute;
+    left: .12rem;
+    top: .58em;
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  ul.bullets li:last-child { margin-bottom: 0; }
+
+  /* ─────────────────────────────────────────────
+     Tags / tech stack
+     ───────────────────────────────────────────── */
+  .stack {
+    font-family: var(--sans);
+    font-size: .71rem;
+    letter-spacing: .055em;
+    color: var(--muted);
+    margin-top: .5rem;
+    line-height: 1.9;
+  }
+
+  .stack .label {
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin-right: .4em;
+  }
+
+  .stack .chip {
+    display: inline-block;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: .05rem .48rem;
+    margin-right: .3rem;
+    white-space: nowrap;
+  }
+
+  /* ─────────────────────────────────────────────
+     Skills grid
+     ───────────────────────────────────────────── */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.4rem;
+    row-gap: 1rem;
+  }
+
+  .skill-group h3 {
+    font-family: var(--sans);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 .32rem;
+  }
+
+  .skill-group p {
+    margin: 0;
+    font-size: .88rem;
+    color: var(--ink-soft);
+    line-height: 1.65;
+  }
+
+  /* ─────────────────────────────────────────────
+     Languages
+     ───────────────────────────────────────────── */
+  .lang-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem 2.6rem;
+  }
+
+  .lang-list li {
+    font-size: .9rem;
+    color: var(--ink-soft);
+  }
+
+  .lang-list strong {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .lang-list span {
+    font-family: var(--sans);
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ─────────────────────────────────────────────
+     Print button
+     ───────────────────────────────────────────── */
+  .print-btn {
+    position: fixed;
+    right: 1.6rem;
+    bottom: 1.6rem;
+    font-family: var(--sans);
+    font-size: .72rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 2px;
+    padding: .7rem 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(165,28,48,.35);
+    transition: background .18s ease, transform .18s ease;
+  }
+
+  .print-btn:hover { background: #8c1626; transform: translateY(-1px); }
+
+  /* ─────────────────────────────────────────────
+     Responsive
+     ───────────────────────────────────────────── */
+  @media (max-width: 720px) {
+    body { padding: 1rem .6rem 3rem; font-size: 14.5px; }
+    .page { padding: 2rem 1.4rem 2.4rem; }
+    .name { font-size: 1.75rem; letter-spacing: .11em; }
+    .entry-head { flex-direction: column; gap: .1rem; }
+    .entry-dates { padding-top: 0; }
+    .skills-grid { grid-template-columns: 1fr; }
+    .print-btn { right: 1rem; bottom: 1rem; }
+  }
+
+  /* ─────────────────────────────────────────────
+     Print
+     ───────────────────────────────────────────── */
+  @page { size: A4; margin: 14mm 15mm; }
+
+  @media print {
+    body {
+      background: #fff;
+      padding: 0;
+      font-size: 10.4pt;
+      line-height: 1.45;
+    }
+    .page {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+    .print-btn { display: none !important; }
+    .name { font-size: 1.95rem; }
+    section { margin-bottom: 1.15rem; page-break-inside: avoid; }
+    .entry { page-break-inside: avoid; }
+    a { color: inherit; border: none !important; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <!-- ══════════════ MASTHEAD ══════════════ -->
+  <header class="masthead">
+    <h1 class="name">Bogdan Coste</h1>
+    <p class="tagline">AI &middot; ML &middot; LLM &middot; RAG &middot; Agent Systems</p>
+    <p class="contact">
+      Cluj-Napoca, Romania
+      <span class="sep">|</span>
+      <a href="https://www.linkedin.com/in/bogdan-coste-47316428a">linkedin.com/in/bogdan-coste-47316428a</a>
+    </p>
+  </header>
+
+  <!-- ══════════════ PROFILE ══════════════ -->
+  <section>
+    <h2>Profile</h2>
+    <p class="lede">
+      Final-year Computer Science student focused on intelligent software systems and the modern AI
+      ecosystem — particularly Large Language Models, Retrieval-Augmented Generation (RAG), and
+      autonomous, agentic systems, alongside a solid grounding in machine learning. Combines
+      mathematical logic and structured problem-solving with hands-on engineering across the AI stack,
+      from data and retrieval through to deployment.
+    </p>
+  </section>
+
+  <!-- ══════════════ SKILLS ══════════════ -->
+  <section>
+    <h2>Skills</h2>
+    <div class="skills-grid">
+
+      <div class="skill-group">
+        <h3>Artificial Intelligence &amp; ML</h3>
+        <p>Artificial Intelligence &middot; Large Language Models (LLM) &middot; Natural Language
+           Processing (NLP) &middot; Agentic AI Development &middot; Multi-Agent Systems &middot;
+           Machine Learning &middot; Retrieval-Augmented Generation (RAG) &middot; Knowledge Graphs</p>
+      </div>
+
+      <div class="skill-group">
+        <h3>Frameworks &amp; Tooling</h3>
+        <p>PyTorch &middot; LangChain &middot; FastAPI &middot; Ollama &middot;
+           Model Context Protocol (MCP) &middot; Python</p>
+      </div>
+
+      <div class="skill-group">
+        <h3>Data &amp; Infrastructure</h3>
+        <p>Qdrant &middot; Vector Databases &middot; Graph Databases &middot;
+           Rancher Kubernetes Management &middot; Docker &amp; Docker Compose</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════ EXPERIENCE ══════════════ -->
+  <section>
+    <h2>Experience</h2>
+
+    <article class="entry">
+      <div class="entry-head">
+        <p class="entry-title">Artificial Intelligence Intern</p>
+        <p class="entry-dates">Jul 2026 – Sep 2026</p>
+      </div>
+      <p class="entry-meta">QIAGEN &middot; Full-time &middot; Cluj-Napoca, Romania &middot; On-site</p>
+      <ul class="bullets">
+        <li>Build generative AI and machine learning solutions for genomics and medicine, translating
+            raw chemical and biological data into structured assets.</li>
+        <li>Develop context-aware models that ground their outputs in curated domain knowledge to
+            support scientific discovery workflows.</li>
+        <li>Work across the modern AI stack — LangChain, Retrieval-Augmented Generation (RAG), and
+            vector-backed retrieval — to connect unstructured research data with downstream reasoning.</li>
+      </ul>
+      <p class="stack">
+        <span class="label">Relevant:</span>
+        <span class="chip">Large Language Models (LLMs)</span>
+        <span class="chip">Generative AI</span>
+        <span class="chip">Vector Databases</span>
+        <span class="chip">Machine Learning</span>
+        <span class="chip">Retrieval-Augmented Generation (RAG)</span>
+        <span class="chip">Natural Language Processing (NLP)</span>
+        <span class="chip">Agentic AI</span>
+        <span class="chip">LangChain</span>
+      </p>
+    </article>
+  </section>
+
+  <!-- ══════════════ PROJECTS ══════════════ -->
+  <section>
+    <h2>Projects</h2>
+
+    <article class="entry">
+      <div class="entry-head">
+        <p class="entry-title">NCT Therapeutic Category Mapper</p>
+        <p class="entry-dates">QIAGEN &middot; AI &amp; NLP Division</p>
+      </div>
+      <p class="entry-meta">Two-axis ontology mapping platform &middot; FastAPI &middot; LLMs &middot; RAG &middot; Vector Retrieval &middot; Embeddings &middot; Qdrant &middot; SapBERT &middot; <a href="https://github.com/bogdan-coste/NCT_Drug_Mapper">github.com/bogdan-coste/NCT_Drug_Mapper</a></p>
+      <ul class="bullets">
+        <li>Built an end-to-end platform that maps drug and intervention terms from
+            ClinicalTrials.gov (NCT) studies onto two ontology axes — <em>therapeutic categories</em> and
+            <em>drug classes</em> — grounding every mapping in the NCI Thesaurus (NCIt) hierarchy.</li>
+        <li>Implemented multi-vector semantic retrieval over Qdrant, pairing SapBERT name embeddings
+            with documentation embeddings and fusing the rankings through Reciprocal Rank Fusion (RRF)
+            to surface the strongest ontology candidates.</li>
+        <li>Orchestrated an LLM pipeline that resolves ambiguous intervention names (single product,
+            regimen, composite, or class request), drafts definitions, and performs the final ontology
+            mapping — cross-checking each definition against NCIt and falling back to LLM synthesis only
+            when no ontology entry exists.</li>
+        <li>Authored the hierarchy ingestion tooling: a multi-vector enrichment format (display-name,
+            documentation, parent and child embeddings) loaded into Qdrant with automatic dimensionality
+            detection and axis-based payload filtering for the two retrieval tracks.</li>
+        <li>Integrated the stack end to end — an asynchronous FastAPI backend with start/poll endpoints
+            for long-running runs, LLM orchestration driving definition generation and ontology mapping,
+            SapBERT embeddings feeding multi-vector retrieval in Qdrant, a Vue 3 (Vite) single-page UI,
+            and a Docker Compose deployment coordinating the API and Qdrant.</li>
+      </ul>
+      <p class="stack">
+        <span class="label">Stack:</span>
+        <span class="chip">Python</span>
+        <span class="chip">FastAPI</span>
+        <span class="chip">SapBERT</span>
+        <span class="chip">Qdrant</span>
+        <span class="chip">LLM Orchestration</span>
+        <span class="chip">Docker</span>
+      </p>
+    </article>
+
+    <article class="entry">
+      <div class="entry-head">
+        <p class="entry-title">Nexus OncoBot</p>
+        <p class="entry-dates">Buildathon ROTSA &middot; 3rd Place</p>
+      </div>
+      <p class="entry-meta">Proof of concept delivered in a 48-hour buildathon &middot; Team of two</p>
+      <ul class="bullets">
+        <li>Delivered the proof of concept for an application that brings the latest oncology research
+            directly to physicians and researchers immediately after publication.</li>
+        <li>Targeted output to the specific genes and mutations of patients with cancer, in a form that
+            is accessible, traceable, and explainable.</li>
+        <li>Built an AI chatbot interface with a strong emphasis on the traceability of every source and
+            every response or claim provided.</li>
+        <li>Awarded 3rd place at Buildathon ROTSA (Romanian Tech Startups Association),
+            Cluj-Napoca, with the opportunity to continue developing the product.</li>
+      </ul>
+      <p class="stack">
+        <span class="label">Stack:</span>
+        <span class="chip">Generative AI</span>
+        <span class="chip">RAG</span>
+        <span class="chip">Knowledge Graphs</span>
+      </p>
+    </article>
+  </section>
+
+  <!-- ══════════════ EDUCATION ══════════════ -->
+  <section>
+    <h2>Education</h2>
+
+    <article class="entry">
+      <div class="entry-head">
+        <p class="entry-title">Babe&#537;-Bolyai University</p>
+        <p class="entry-dates">Oct 2024 – Jul 2027</p>
+      </div>
+      <p class="entry-meta">Bachelor of Science, Computer Science &middot; Cluj-Napoca, Romania</p>
+    </article>
+  </section>
+
+  <!-- ══════════════ ACHIEVEMENTS ══════════════ -->
+  <section>
+    <h2>Achievements</h2>
+
+    <article class="entry">
+      <div class="entry-head">
+        <p class="entry-title">Mathematics Olympiad</p>
+        <p class="entry-dates">2023</p>
+      </div>
+      <p class="entry-meta">Winner &middot; advanced to the national phase</p>
+    </article>
+  </section>
+
+  <!-- ══════════════ LANGUAGES ══════════════ -->
+  <section>
+    <h2>Languages</h2>
+    <ul class="lang-list">
+      <li><strong>Romanian</strong> &nbsp;<span>Native or bilingual</span></li>
+      <li><strong>English</strong> &nbsp;<span>Professional working proficiency</span></li>
+    </ul>
+  </section>
+
+</main>
+
+<button class="print-btn" onclick="window.print()">Print / PDF</button>
+
+</body>
+</html>

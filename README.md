@@ -5,6 +5,8 @@ A pipeline that maps drug / intervention terms from ClinicalTrials.gov (NCT) stu
 embeddings for semantic retrieval and an **LLM** for definition generation and final ontology
 mapping.
 
+> This work was developed within the **AI & NLP Division at QIAGEN**.
+
 The repository contains three parts:
 
 | Part | Location | Purpose |
@@ -17,20 +19,53 @@ The repository contains three parts:
 
 ## Architecture
 
-```
-ClinicalTrials.gov API
-        │
-        ▼
-  NCT Loader  ──►  LLM (definition + superclass)  ──►  SapBERT Embedder
-                                                              │
-                                                              ▼
-                                                       Qdrant Vector DB
-                                                              │
-                                                              ▼
-                                                    LLM (ontology mapping)
-                                                              │
-                                                              ▼
-                                                        Final Result
+```mermaid
+flowchart TD
+
+    IN([Drug term + NCT ID])
+    IN --> FETCH
+
+    FETCH["📡 Fetch NCT trial record\nClinicalTrials.gov API v2"]
+    FETCH -->|fail| E_NCT(["❌ No record loaded"])
+    FETCH --> IDENT
+
+    IDENT["🤖 LLM — Identity resolution\nWhat is this term in the trial context?\nOutputs resolution_kind and search terms\nsingle_product · regimen · composite_product\nclass_request · unresolved"]
+    IDENT -->|unresolved| E_RES(["❌ Could not match term\nto NCT intervention"])
+    IDENT --> KIND
+
+    KIND{resolution_kind}
+
+    KIND -->|single product| SP
+    KIND -->|regimen or composite| RC
+    KIND -->|class request| CR
+
+    CR["🏷️ Author used a class label, not a drug name\neg. CD33 directed therapy · anti-HER2 agent · PARP inhibitor\nLLM finds the actual drug in the trial record\nand looks that drug up in NCIt instead"]
+    CR --> NCIT_CR["🔎 NCIt lookup via representative drug\nfrom the trial record\nto retrieve the class definition"]
+    NCIT_CR --> DEFMERGE
+
+    SP["🤖 LLM — Generate definition\nfor the single product"]
+    SP --> NCIT_SP["🔎 Cross-check against NCIt\nTry the term as-is first\nIf not found, retry with simpler reformulations\neg. strip parentheses, normalise spacing\nNCIt definition used if found\notherwise keep the LLM definition"]
+    NCIT_SP --> DEFMERGE
+
+    RC["🤖 LLM — Generate definition\nfor the combination"]
+    RC --> NCIT_RC["🔎 Cross-check each component against NCIt\nLLM synthesizes a combined definition\nusing the NCIt definitions found\nMissing components are noted\nbut synthesis still proceeds"]
+    NCIT_RC --> DEFMERGE
+
+    DEFMERGE["Definition ready\nSource: NCIt direct · NCIt via exemplar drug\nNCIt components + LLM synthesis · LLM only"]
+    DEFMERGE -->|no definition| E_DEF(["❌ Could not generate\na definition"])
+    DEFMERGE --> CATSUGG
+
+    CATSUGG["🤖 LLM — Category suggestion\nDerive specific, broad, root labels\nfrom the definition text"]
+    CATSUGG --> VEC
+
+    VEC["🗄️ Qdrant vector search\nSapBERT embed each label\nRRF fusion across label rankings\nreturns top-20 ontology candidates"]
+    VEC -->|no candidates| E_VEC(["❌ Qdrant returned\nno candidates"])
+    VEC --> MAPPER
+
+    MAPPER["🤖 LLM — Ontology mapping\nPick best category from top-20\nwith definitions and parent context"]
+    MAPPER --> OUT
+
+    OUT([Mapped therapeutic category\ndefinition · NCIt code\nspecific, broad, root labels\nmatch type · reason])
 ```
 
 | Component | Technology |
@@ -112,17 +147,6 @@ uv run scripts/download_models.py
 ```
 
 It prints the resolved path when finished, e.g. `Saved to .../models/sapbert`.
-
-<details>
-<summary>Alternative: download via Docker Compose</summary>
-
-```sh
-docker compose --profile tools run --rm download-models
-```
-
-The service is defined under the `tools` profile, hence `--profile tools`.
-
-</details>
 
 ---
 
