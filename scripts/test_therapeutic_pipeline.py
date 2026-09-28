@@ -1,26 +1,7 @@
-"""
-Test script for the TherapeuticCategory pipeline.
-
-Steps tested:
-    1. Fetch NCT trial and generate a drug definition.
-    2. Suggest therapeutic superclass labels from the definition.
-    3. Embed superclass labels with SapBERT, retrieve candidates from Qdrant,
-       and map to an ontology term.
-
-Usage:
-    uv run scripts/test_therapeutic_pipeline.py
-
-Requires the following .env variables:
-    LLM_MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_APP_ID
-    SAPBERT_MODEL, SAPBERT_BASE_URL, SAPBERT_API_KEY
-    QDRANT_URL, QDRANT_COLLECTION, QDRANT_API_KEY
-"""
-
 import json
 import sys
 from pathlib import Path
 
-# ── Make src importable when running from project root ────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
@@ -35,7 +16,6 @@ from src.retrieval.retriever import TherapeuticCategoryRetriever
 from src.schemas.models import LLMParameters, QdrantParameters, SapBERTParameters
 from src.vectordb.vector_store import VectorStore
 
-# ── Config ────────────────────────────────────────────────────────────────────
 
 NCT_BASE_URL = "https://clinicaltrials.gov/api/v2"
 
@@ -43,8 +23,6 @@ NCT_BASE_URL = "https://clinicaltrials.gov/api/v2"
 TEST_CASES = [
     ("IEV407", ["NCT07604571"]),
 ]
-
-# ── Wiring ────────────────────────────────────────────────────────────────────
 
 llm_params     = LLMParameters.from_env()
 sapbert_params = SapBERTParameters.from_env()
@@ -60,8 +38,6 @@ pipeline = TherapeuticCategory(
     mapping_llm=LLMClient(llm_params),
     retriever=retriever,
 )
-
-# ── Run ───────────────────────────────────────────────────────────────────────
 
 for TERM, NCT_IDS in TEST_CASES:
     print(f"\n{'=' * 60}")

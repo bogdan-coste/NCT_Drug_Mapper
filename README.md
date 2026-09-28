@@ -84,14 +84,16 @@ flowchart TD
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - [uv](https://github.com/astral-sh/uv) — used to create the local environment and run scripts
 - [Node.js](https://nodejs.org/) 20+ — only needed if you want to develop the web UI locally
-- A `.env` file in the project root (see [Configuration](#configuration))
+- A `.env` file in the project root (created in Step 0 below)
 
 ---
 
-## Configuration
+## How to run
 
-Create a `.env` file in the project root **before** starting the containers
-(`docker compose` loads it via `env_file`):
+### Step 0 — Configure the environment
+
+Create a `.env` file in the project root **before** building or starting anything —
+`docker compose` loads it via `env_file`:
 
 ```env
 # ── LLM (OpenAI-compatible endpoint) ──────────────────────────────────────
@@ -119,8 +121,6 @@ MODELS_DIR=/app/models
 ```
 
 ---
-
-## How to run
 
 ### Step 1 — Download the SapBERT model
 
@@ -228,9 +228,6 @@ object keyed by entity ID, with **one entry per entity**:
       // Ontological or clinical narrative definition of the entity
       "documentation": "<definition_or_documentation_text>",
 
-      // Dense float vector representing the documentation (BioLORD) — retrieval/RAG
-      "documentation_embedding": [0.0, 0.0],
-
       // Internal canonical object name or programmatic symbol
       "object_name": "<system_object_name>",
 
@@ -246,11 +243,6 @@ object keyed by entity ID, with **one entry per entity**:
   }
 }
 ```
-
-> The comments above are explanatory only — the real file must be **valid JSON** (no `//`, no
-> trailing commas). The root object should contain **multiple entries**, one key per ontology
-> entity (not just a single one). Optionally add `"durable_id"` inside `metadata` to populate the
-> node IDs shown in the UI.
 
 #### 3b. Load it into Qdrant
 
@@ -305,24 +297,6 @@ from scratch. Once it finishes, the stack is ready to use.
 
 Open **http://localhost:8000**. Pick a pipeline in the left sidebar (**Therapeutic Category** or
 **Drug Class**), enter an intervention term and one or more NCT IDs, and run it.
-
-### API
-
-The pipeline is asynchronous: start a run, then poll for partial results.
-
-```sh
-# start a therapeutic-category run
-curl -X POST http://localhost:8000/start_pipeline \
-  -H "Content-Type: application/json" \
-  -d '{"term": "pembrolizumab", "nct_ids": ["NCT02142738"]}'
-# → {"run_id": "<uuid>"}
-
-# poll until "_done" is true
-curl http://localhost:8000/result/<uuid>
-```
-
-Use `/start_dc_pipeline` instead of `/start_pipeline` for a drug-class run. Interactive API docs
-are at http://localhost:8000/docs.
 
 ### Interactive mode
 
@@ -404,6 +378,7 @@ page). The Docker image builds this automatically in a dedicated Node stage.
 │   ├── index.html
 │   ├── vite.config.js                      # dev proxy → :8000; build → frontend/dist
 │   ├── package.json
+│   ├── public/                             # static assets (favicon, icons)
 │   ├── dist/                               # production bundle served by FastAPI (gitignored)
 │   └── src/
 │       ├── main.js
@@ -419,6 +394,8 @@ page). The Docker image builds this automatically in a dedicated Node stage.
 │           └── DcResultPanel.vue
 ├── scripts/
 │   ├── download_models.py                  # Download SapBERT weights from HuggingFace
+│   ├── test_therapeutic_pipeline.py        # End-to-end smoke test of the pipeline
+│   ├── extract_drug_columns.py             # Extract intervention columns from a CSV
 │   └── db_enrichment/
 │       ├── therapeutic_definitions.json    # Hierarchy + embeddings (you create this)
 │       ├── load_hierarchy_into_qdrant.py   # Load the hierarchy into Qdrant
@@ -427,53 +404,22 @@ page). The Docker image builds this automatically in a dedicated Node stage.
 │   ├── api/          # FastAPI routes and SapBERT server
 │   ├── embedder/     # SapBERT embedding client
 │   ├── generation/   # LLM-backed generators and mappers
-│   ├── ingestion/    # ClinicalTrials.gov NCT loader
+│   ├── ingestion/    # ClinicalTrials.gov (NCT) and NCI EVS (NCIt) loaders
 │   ├── llm/          # LLM client wrapper
 │   ├── processing/   # Pipeline modules (therapeutic category, drug class)
 │   ├── prompts/      # Prompt templates
 │   ├── retrieval/    # Qdrant-backed retriever (RRF fusion)
 │   ├── schemas/      # Pydantic config and request models
 │   └── vectordb/     # Qdrant vector store wrapper
+├── docs/             # Documentation and the pipeline diagram
 ├── models/           # SapBERT weights (downloaded in Step 1)
 ├── data/             # Input data files
 ├── main.py           # Interactive CLI entrypoint
 ├── batch_test.py     # Batch processing script
 ├── Dockerfile
-└── docker-compose.yml
+├── docker-compose.yml
+├── docker-entrypoint.sh
+├── pyproject.toml
+└── requirements.txt
 ```
 
----
-
-## Troubleshooting
-
-**`docker compose up` fails on a missing `.env`**
-Create the `.env` file from [Configuration](#configuration) first — Compose loads it via `env_file`.
-
-**Container name conflict on `docker compose up`**
-
-```sh
-docker compose down
-docker compose up --build
-```
-
-If orphaned containers remain, force-remove them and retry:
-
-```sh
-docker rm -f therapeutic-qdrant therapeutic-pipeline
-```
-
-**Qdrant collection is empty / retrieval returns nothing**
-Re-run [Step 3](#step-3--populate-the-vector-database-one-time). Also check that the collection name
-in `.env` matches `--collection`, and that nodes have an `app_drug_category` of exactly
-`therapeutic category` or `drug class`.
-
-**`Could not determine the SapBERT and BioLORD vector dimensions`**
-The loader could not find embedding fields. Ensure each node has `display_name_embedding`,
-`documentation_embedding`, `children_embeddings`, and `parents_embeddings` (see Step 3a).
-
-**SapBERT model not found**
-The container tries to auto-download from HuggingFace on startup if `models/sapbert/` is missing.
-For offline environments, run [Step 1](#step-1--download-the-sapbert-model) first.
-
-**`Frontend not built` page at `/`**
-The Vue bundle has not been produced. Run `cd frontend && npm run build`, or let Docker build it.
