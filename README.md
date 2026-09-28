@@ -250,7 +250,7 @@ The collection is exposed on the host at `http://localhost:6333`. Run the loader
 root:
 
 ```sh
-uv run scripts/db_enrichment/load_hierarchy_into_qdrant.py therapeutic_definitions.json \
+uv run scripts/db_enrichment/load_hierarchy_into_qdrant.py scripts/db_enrichment/therapeutic_definitions.json \
   --collection therapeutic_categories_multivector_768 \
   --url http://localhost:6333 \
   --recreate
@@ -263,7 +263,7 @@ uv run scripts/db_enrichment/load_hierarchy_into_qdrant.py therapeutic_definitio
 
 | Argument | Description |
 |---|---|
-| `therapeutic_definitions.json` | Hierarchy + embedding file (the input path) |
+| `scripts/db_enrichment/therapeutic_definitions.json` | Hierarchy + embedding file (the input path) |
 | `--collection` | Qdrant collection to create/populate (**must match `QDRANT_COLLECTION` in `.env`**) |
 | `--url` | Qdrant URL (default: `http://localhost:6333`) |
 | `--recreate` | Drop and recreate the collection if it already exists |

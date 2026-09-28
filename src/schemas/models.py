@@ -637,6 +637,12 @@ class LLMRequest(BaseModel):
 
 # ── Config Models ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
+def _env_int(name: str, default: int) -> int:
+    """Read an integer env var, falling back to `default` when unset or blank."""
+    raw = os.getenv(name, "")
+    return int(raw) if raw.strip() else default
+
+
 class LLMParameters:
     def __init__(self,
         llm_model: str,
@@ -677,7 +683,7 @@ class SapBERTParameters:
             sapbert_model=os.getenv("SAPBERT_MODEL", ""),
             sapbert_base_url=os.getenv("SAPBERT_BASE_URL", ""),
             sapbert_api_key=os.getenv("SAPBERT_API_KEY", ""),
-            sapbert_port=int(os.getenv("SAPBERT_PORT", "7997")),
+            sapbert_port=_env_int("SAPBERT_PORT", 7997),
         )
 
 class QdrantParameters:
@@ -731,7 +737,7 @@ class ServerParameters:
     @classmethod
     def from_env(cls) -> "ServerParameters":
         return cls(
-            server_port=int(os.getenv("SERVER_PORT", "8000")),
+            server_port=_env_int("SERVER_PORT", 8000),
         )
 
 

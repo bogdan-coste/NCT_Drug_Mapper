@@ -1,1 +1,4 @@
-uv run load_hierarchy_into_qdrant.py output_with_embeddings.json --collection therapeutic_categories_multivector_768 --url http://localhost:6333 --recreate
+uv run scripts/db_enrichment/load_hierarchy_into_qdrant.py scripts/db_enrichment/therapeutic_definitions.json \
+  --collection therapeutic_categories_multivector_768 \
+  --url http://localhost:6333 \
+  --recreate

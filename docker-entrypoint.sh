@@ -28,11 +28,7 @@ import uvicorn, os
 
 config = AppConfig.from_env()
 
-# Boot SapBERT background thread
-from src.api.sapbert_server import SapBERTServer
-SapBERTServer(config)
-
-# Wire and serve FastAPI app
+# Server() boots the SapBERT embedding server internally, so it is not started here.
 server = Server(config)
 uvicorn.run(server.server, host='0.0.0.0', port=config.server.server_port)
 "
