@@ -18,3 +18,7 @@ models/
 
 # Node / frontend
 node_modules/
+
+# Local-only files (keep out of the repository)
+data/
+CV.html
