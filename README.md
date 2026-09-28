@@ -274,7 +274,6 @@ The loader auto-detects the embedding dimensions from the file and maps the JSON
 | JSON field | Qdrant |
 |---|---|
 | `metadata.display_name_embedding` | `display_name` vector (SapBERT — the field that is searched) |
-| `metadata.documentation_embedding` | `documentation` vector (BioLORD) |
 | `children_embeddings` | `children` vector |
 | `parents_embeddings` | `parents` vector |
 | `metadata.display_name` / `documentation` | payload fields used by the UI |
@@ -422,4 +421,3 @@ page). The Docker image builds this automatically in a dedicated Node stage.
 ├── pyproject.toml
 └── requirements.txt
 ```
-
