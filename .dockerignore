@@ -1,0 +1,33 @@
+# Version control
+.git
+.gitignore
+
+# Virtual environment
+.venv
+
+# Python cache
+__pycache__/
+*.py[oc]
+*.egg-info
+build/
+dist/
+wheels/
+
+# IDE / editor
+.ruff_cache
+
+# Local environment (injected at runtime via docker-compose)
+.env
+
+# Model weights — mounted at runtime via volume, not copied into the image
+models/
+
+# Data directory — mounted at runtime
+data/
+
+# Test scripts not needed in the image
+scripts/test_*.py
+
+# Node dependencies and the built frontend bundle (rebuilt inside the image)
+**/node_modules
+frontend/dist

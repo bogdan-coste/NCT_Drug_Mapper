@@ -1,0 +1,1 @@
+uv run load_hierarchy_into_qdrant.py output_with_embeddings.json --collection therapeutic_categories_multivector_768 --url http://localhost:6333 --recreate

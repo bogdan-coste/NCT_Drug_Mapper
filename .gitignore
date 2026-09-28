@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Model weights
+models/
+
+# Environment variables (keep .env.example tracked)
+.env
+!.env.example
+
+# Node / frontend
+node_modules/
