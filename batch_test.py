@@ -16,6 +16,7 @@ Arguments:
 """
 
 import argparse
+import asyncio
 import csv
 import sys
 import time
@@ -242,7 +243,14 @@ def main() -> None:
 
                 t0 = time.perf_counter()
                 try:
-                    result = pipeline.run(term=term, nct_ids=nct_ids)
+                    result: dict = {}
+                    asyncio.run(
+                        pipeline._run_staged_async(
+                            term=term,
+                            nct_ids=nct_ids,
+                            on_stage=lambda updates, target=result: target.update(updates),
+                        )
+                    )
                 except Exception as exc:
                     elapsed = time.perf_counter() - t0
                     exc_str = str(exc)

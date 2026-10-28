@@ -1,0 +1,1181 @@
+{
+  "cardiovascular_agents": {
+    "children": [
+      "antihypertensive_agents",
+      "antiarrhythmic_agents",
+      "lipid_modifying_agents",
+      "anticoagulants",
+      "antiplatelet_agents"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Cardiovascular Agents",
+      "display_name_embedding": [],
+      "documentation": "Therapeutic substances and pharmacological agents acting directly or indirectly on the heart and circulatory vascular system to treat cardiovascular disorders.",
+      "object_name": "cardiovascular_agents",
+      "umls_concept_id": "C0007220",
+      "umls_source_id": [
+        "MeSH:D002317",
+        "ATC:C"
+      ]
+    }
+  },
+  "antihypertensive_agents": {
+    "children": [
+      "beta_adrenergic_blockers",
+      "ace_inhibitors",
+      "angiotensin_receptor_blockers",
+      "calcium_channel_blockers",
+      "diuretics"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "cardiovascular_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antihypertensive Agents",
+      "display_name_embedding": [],
+      "documentation": "Drugs used in the prophylaxis and management of acute or chronic arterial hypertension to prevent vascular complications such as stroke and myocardial infarction.",
+      "object_name": "antihypertensive_agents",
+      "umls_concept_id": "C0003364",
+      "umls_source_id": [
+        "MeSH:D000959",
+        "ATC:C02"
+      ]
+    }
+  },
+  "beta_adrenergic_blockers": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antihypertensive_agents",
+      "antiarrhythmic_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Beta-Adrenergic Blockers",
+      "display_name_embedding": [],
+      "documentation": "Competitive antagonists of beta-adrenergic receptors that attenuate the chronotropic and inotropic effects of catecholamines on myocardial and vascular tissue.",
+      "object_name": "beta_adrenergic_blockers",
+      "umls_concept_id": "C0003184",
+      "umls_source_id": [
+        "MeSH:D000319",
+        "ATC:C07"
+      ]
+    }
+  },
+  "ace_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antihypertensive_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Angiotensin-Converting Enzyme Inhibitors",
+      "display_name_embedding": [],
+      "documentation": "Inhibitors of angiotensin-converting enzyme that decrease circulating angiotensin II and aldosterone concentrations, promoting vasodilation and natriuresis.",
+      "object_name": "ace_inhibitors",
+      "umls_concept_id": "C0003483",
+      "umls_source_id": [
+        "MeSH:D000806",
+        "ATC:C09A"
+      ]
+    }
+  },
+  "angiotensin_receptor_blockers": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antihypertensive_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Angiotensin Receptor Blockers",
+      "display_name_embedding": [],
+      "documentation": "Selective antagonists of the angiotensin II type 1 (AT1) receptor that inhibit vasoconstrictor and aldosterone-secreting actions of angiotensin II.",
+      "object_name": "angiotensin_receptor_blockers",
+      "umls_concept_id": "C0162590",
+      "umls_source_id": [
+        "MeSH:D047228",
+        "ATC:C09C"
+      ]
+    }
+  },
+  "calcium_channel_blockers": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antihypertensive_agents",
+      "antiarrhythmic_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Calcium Channel Blockers",
+      "display_name_embedding": [],
+      "documentation": "Agents that inhibit the transmembrane influx of calcium ions through voltage-gated L-type calcium channels in cardiac muscle and vascular smooth muscle.",
+      "object_name": "calcium_channel_blockers",
+      "umls_concept_id": "C0006684",
+      "umls_source_id": [
+        "MeSH:D002121",
+        "ATC:C08"
+      ]
+    }
+  },
+  "antiarrhythmic_agents": {
+    "children": [
+      "beta_adrenergic_blockers",
+      "calcium_channel_blockers"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "cardiovascular_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antiarrhythmic Agents",
+      "display_name_embedding": [],
+      "documentation": "Agents used to prevent or suppress cardiac arrhythmias by altering electrophysiological properties of the myocardium and conducting system.",
+      "object_name": "antiarrhythmic_agents",
+      "umls_concept_id": "C0003195",
+      "umls_source_id": [
+        "MeSH:D000889",
+        "ATC:C01B"
+      ]
+    }
+  },
+  "lipid_modifying_agents": {
+    "children": [
+      "hmg_coa_reductase_inhibitors",
+      "pcsk9_inhibitors"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "cardiovascular_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Lipid Modifying Agents",
+      "display_name_embedding": [],
+      "documentation": "Therapeutic substances utilized to normalize aberrant plasma lipid and lipoprotein profiles, targeting reduction of atherogenic cholesterol fractions.",
+      "object_name": "lipid_modifying_agents",
+      "umls_concept_id": "C0020088",
+      "umls_source_id": [
+        "MeSH:D000960",
+        "ATC:C10"
+      ]
+    }
+  },
+  "hmg_coa_reductase_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "lipid_modifying_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "HMG-CoA Reductase Inhibitors (Statins)",
+      "display_name_embedding": [],
+      "documentation": "Competitive inhibitors of 3-hydroxy-3-methylglutaryl-coenzyme A reductase, the rate-limiting enzyme in hepatic cholesterol biosynthesis.",
+      "object_name": "hmg_coa_reductase_inhibitors",
+      "umls_concept_id": "C0086418",
+      "umls_source_id": [
+        "MeSH:D019821",
+        "ATC:C10AA"
+      ]
+    }
+  },
+  "pcsk9_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "lipid_modifying_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "PCSK9 Inhibitors",
+      "display_name_embedding": [],
+      "documentation": "Monoclonal antibodies or small interfering RNAs targeting proprotein convertase subtilisin/kexin type 9 to enhance hepatic LDL-receptor recycling.",
+      "object_name": "pcsk9_inhibitors",
+      "umls_concept_id": "C4086603",
+      "umls_source_id": [
+        "MeSH:D000069472",
+        "ATC:C10AX13"
+      ]
+    }
+  },
+  "anticoagulants": {
+    "children": [
+      "direct_oral_anticoagulants"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "cardiovascular_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Anticoagulants",
+      "display_name_embedding": [],
+      "documentation": "Agents that prevent or delay the clotting of blood by impairing the synthesis or activity of coagulation factors.",
+      "object_name": "anticoagulants",
+      "umls_concept_id": "C0003280",
+      "umls_source_id": [
+        "MeSH:D000925",
+        "ATC:B01AA"
+      ]
+    }
+  },
+  "direct_oral_anticoagulants": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "anticoagulants"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Direct Oral Anticoagulants (DOACs)",
+      "display_name_embedding": [],
+      "documentation": "Orally active small-molecule inhibitors directly targeting activated Factor X (FXa) or thrombin (Factor IIa) in the coagulation cascade.",
+      "object_name": "direct_oral_anticoagulants",
+      "umls_concept_id": "C4282361",
+      "umls_source_id": [
+        "MeSH:D065427",
+        "ATC:B01AF"
+      ]
+    }
+  },
+  "antiplatelet_agents": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "cardiovascular_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Antiplatelet Agents",
+      "display_name_embedding": [],
+      "documentation": "Compounds that suppress platelet activation, adhesion, or aggregation to inhibit intravascular thrombus formation.",
+      "object_name": "antiplatelet_agents",
+      "umls_concept_id": "C0032120",
+      "umls_source_id": [
+        "MeSH:D010975",
+        "ATC:B01AC"
+      ]
+    }
+  },
+  "diuretics": {
+    "children": [
+      "loop_diuretics",
+      "thiazide_diuretics"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "antihypertensive_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Diuretics",
+      "display_name_embedding": [],
+      "documentation": "Substances that promote the excretion of water and electrolytes, primarily sodium, through the kidneys to reduce intravascular volume.",
+      "object_name": "diuretics",
+      "umls_concept_id": "C0012798",
+      "umls_source_id": [
+        "MeSH:D004232",
+        "ATC:C03"
+      ]
+    }
+  },
+  "loop_diuretics": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "diuretics"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Loop Diuretics",
+      "display_name_embedding": [],
+      "documentation": "Potent natriuretic diuretics that act primarily by inhibiting the Na+/K+/2Cl- cotransporter in the thick ascending limb of the loop of Henle.",
+      "object_name": "loop_diuretics",
+      "umls_concept_id": "C0087111",
+      "umls_source_id": [
+        "MeSH:D054086",
+        "ATC:C03C"
+      ]
+    }
+  },
+  "thiazide_diuretics": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "diuretics"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Thiazide and Thiazide-Like Diuretics",
+      "display_name_embedding": [],
+      "documentation": "Diuretic agents that inhibit NaCl cotransport in the distal convoluted tubule of the nephron, moderating blood pressure and fluid retention.",
+      "object_name": "thiazide_diuretics",
+      "umls_concept_id": "C0039841",
+      "umls_source_id": [
+        "MeSH:D049970",
+        "ATC:C03A"
+      ]
+    }
+  },
+  "central_nervous_system_agents": {
+    "children": [
+      "antidepressants",
+      "antipsychotics",
+      "anticonvulsants",
+      "anxiolytics_sedatives_hypnotics",
+      "analgesics"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Central Nervous System Agents",
+      "display_name_embedding": [],
+      "documentation": "Agents modifying neuronal neurotransmission, synaptic signaling, or cellular excitability within the brain and spinal cord.",
+      "object_name": "central_nervous_system_agents",
+      "umls_concept_id": "C0007682",
+      "umls_source_id": [
+        "MeSH:D002492",
+        "ATC:N"
+      ]
+    }
+  },
+  "antidepressants": {
+    "children": [
+      "selective_serotonin_reuptake_inhibitors",
+      "serotonin_norepinephrine_reuptake_inhibitors"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "central_nervous_system_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antidepressants",
+      "display_name_embedding": [],
+      "documentation": "Therapeutic substances used in the alleviation of affective disorders, major depressive episodes, dysthymia, and related mood conditions.",
+      "object_name": "antidepressants",
+      "umls_concept_id": "C0003289",
+      "umls_source_id": [
+        "MeSH:D000928",
+        "ATC:N06A"
+      ]
+    }
+  },
+  "selective_serotonin_reuptake_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antidepressants"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Selective Serotonin Reuptake Inhibitors (SSRIs)",
+      "display_name_embedding": [],
+      "documentation": "Compounds selectively blocking the neuronal presynaptic serotonin transporter protein (SERT), potentiating serotonergic neurotransmission.",
+      "object_name": "selective_serotonin_reuptake_inhibitors",
+      "umls_concept_id": "C0036640",
+      "umls_source_id": [
+        "MeSH:D018687",
+        "ATC:N06AB"
+      ]
+    }
+  },
+  "serotonin_norepinephrine_reuptake_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antidepressants"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Serotonin-Norepinephrine Reuptake Inhibitors (SNRIs)",
+      "display_name_embedding": [],
+      "documentation": "Dual reuptake inhibitors that block both serotonin and norepinephrine transporters, utilized in major depression, generalized anxiety, and neuropathic pain.",
+      "object_name": "serotonin_norepinephrine_reuptake_inhibitors",
+      "umls_concept_id": "C0935989",
+      "umls_source_id": [
+        "MeSH:D017367",
+        "ATC:N06AX"
+      ]
+    }
+  },
+  "antipsychotics": {
+    "children": [
+      "atypical_antipsychotics"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "central_nervous_system_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antipsychotics",
+      "display_name_embedding": [],
+      "documentation": "Psychopharmacological agents prescribed in schizophrenia, bipolar mania, and psychotic disorders to mitigate delusions, hallucinations, and thought disorganization.",
+      "object_name": "antipsychotics",
+      "umls_concept_id": "C0003451",
+      "umls_source_id": [
+        "MeSH:D014150",
+        "ATC:N05A"
+      ]
+    }
+  },
+  "atypical_antipsychotics": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antipsychotics"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Second-Generation (Atypical) Antipsychotics",
+      "display_name_embedding": [],
+      "documentation": "Antipsychotics characterized by dual dopamine D2 and serotonin 5-HT2A receptor antagonism with lower risk of acute extrapyramidal symptoms.",
+      "object_name": "atypical_antipsychotics",
+      "umls_concept_id": "C0935988",
+      "umls_source_id": [
+        "MeSH:D014151",
+        "ATC:N05AH"
+      ]
+    }
+  },
+  "anticonvulsants": {
+    "children": [
+      "sodium_channel_blockers_cns"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "central_nervous_system_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Anticonvulsants",
+      "display_name_embedding": [],
+      "documentation": "Diverse class of pharmacological agents that reduce excessive neuronal hyperexcitability and suppress seizure propagation across epileptic networks.",
+      "object_name": "anticonvulsants",
+      "umls_concept_id": "C0003299",
+      "umls_source_id": [
+        "MeSH:D000927",
+        "ATC:N03A"
+      ]
+    }
+  },
+  "sodium_channel_blockers_cns": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "anticonvulsants"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Neuronal Voltage-Gated Sodium Channel Blockers",
+      "display_name_embedding": [],
+      "documentation": "Antiepileptic molecules that stabilize the inactive conformation of voltage-dependent neuronal sodium channels to limit sustained high-frequency action potential firing.",
+      "object_name": "sodium_channel_blockers_cns",
+      "umls_concept_id": "C0596328",
+      "umls_source_id": [
+        "MeSH:D026941",
+        "ATC:N03AF"
+      ]
+    }
+  },
+  "anxiolytics_sedatives_hypnotics": {
+    "children": [
+      "benzodiazepines"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "central_nervous_system_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Anxiolytics, Sedatives, and Hypnotics",
+      "display_name_embedding": [],
+      "documentation": "Therapeutic substances utilized for sedation, anxiolysis, induction of sleep, and alleviation of acute psychomotor agitation.",
+      "object_name": "anxiolytics_sedatives_hypnotics",
+      "umls_concept_id": "C0020615",
+      "umls_source_id": [
+        "MeSH:D006993",
+        "ATC:N05B"
+      ]
+    }
+  },
+  "benzodiazepines": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "anxiolytics_sedatives_hypnotics"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Benzodiazepines",
+      "display_name_embedding": [],
+      "documentation": "Positive allosteric modulators of the GABAA receptor that enhance chloride conductance, yielding anxiolytic, sedative, anticonvulsant, and muscle-relaxant actions.",
+      "object_name": "benzodiazepines",
+      "umls_concept_id": "C0005037",
+      "umls_source_id": [
+        "MeSH:D001569",
+        "ATC:N05BA"
+      ]
+    }
+  },
+  "analgesics": {
+    "children": [
+      "opioid_analgesics"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "central_nervous_system_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Analgesics",
+      "display_name_embedding": [],
+      "documentation": "Compounds designed to relieve acute or chronic pain without inducing total anesthesia or loss of consciousness.",
+      "object_name": "analgesics",
+      "umls_concept_id": "C0002771",
+      "umls_source_id": [
+        "MeSH:D000700",
+        "ATC:N02"
+      ]
+    }
+  },
+  "opioid_analgesics": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "analgesics"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Opioid Analgesics",
+      "display_name_embedding": [],
+      "documentation": "Agonists targeting central and peripheral mu-, kappa-, and delta-opioid receptors to modulate ascending pain pathways and nociceptive thresholds.",
+      "object_name": "opioid_analgesics",
+      "umls_concept_id": "C0002772",
+      "umls_source_id": [
+        "MeSH:D000701",
+        "ATC:N02A"
+      ]
+    }
+  },
+  "anti_infective_agents": {
+    "children": [
+      "antibacterial_agents",
+      "antiviral_agents",
+      "antifungal_agents"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Anti-Infective Agents",
+      "display_name_embedding": [],
+      "documentation": "Broad therapeutic umbrella comprising pharmaceutical agents that eradicate or inhibit the proliferation of pathogenic microorganisms.",
+      "object_name": "anti_infective_agents",
+      "umls_concept_id": "C0003308",
+      "umls_source_id": [
+        "MeSH:D000890",
+        "ATC:J"
+      ]
+    }
+  },
+  "antibacterial_agents": {
+    "children": [
+      "penicillins",
+      "cephalosporins",
+      "fluoroquinolones",
+      "macrolides"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "anti_infective_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antibacterial Agents",
+      "display_name_embedding": [],
+      "documentation": "Substances of natural, semi-synthetic, or synthetic origin that destroy bacterial organisms or inhibit their cellular growth and replication.",
+      "object_name": "antibacterial_agents",
+      "umls_concept_id": "C0003232",
+      "umls_source_id": [
+        "MeSH:D000900",
+        "ATC:J01"
+      ]
+    }
+  },
+  "penicillins": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antibacterial_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Penicillins",
+      "display_name_embedding": [],
+      "documentation": "Beta-lactam antibiotics that covalently bind penicillin-binding proteins (PBPs), disrupting peptidoglycan cell-wall cross-linking and triggering autolysis.",
+      "object_name": "penicillins",
+      "umls_concept_id": "C0030842",
+      "umls_source_id": [
+        "MeSH:D010406",
+        "ATC:J01C"
+      ]
+    }
+  },
+  "cephalosporins": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antibacterial_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Cephalosporins",
+      "display_name_embedding": [],
+      "documentation": "Class of beta-lactam bactericidal antibiotics derived from Acremonium, categorized across five generations of antimicrobial spectrum and beta-lactamase stability.",
+      "object_name": "cephalosporins",
+      "umls_concept_id": "C0007789",
+      "umls_source_id": [
+        "MeSH:D002511",
+        "ATC:J01D"
+      ]
+    }
+  },
+  "fluoroquinolones": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antibacterial_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Fluoroquinolones",
+      "display_name_embedding": [],
+      "documentation": "Synthetic bactericidal antimicrobials that inhibit bacterial DNA gyrase (topoisomerase II) and topoisomerase IV, preventing replication and transcription.",
+      "object_name": "fluoroquinolones",
+      "umls_concept_id": "C0016255",
+      "umls_source_id": [
+        "MeSH:D024841",
+        "ATC:J01MA"
+      ]
+    }
+  },
+  "macrolides": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antibacterial_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Macrolides",
+      "display_name_embedding": [],
+      "documentation": "Bacteriostatic antibiotics characterized by a large macrocyclic lactone ring that bind reversibly to the 50S ribosomal subunit to impede protein elongation.",
+      "object_name": "macrolides",
+      "umls_concept_id": "C0024440",
+      "umls_source_id": [
+        "MeSH:D008264",
+        "ATC:J01FA"
+      ]
+    }
+  },
+  "antiviral_agents": {
+    "children": [
+      "nucleoside_reverse_transcriptase_inhibitors"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "anti_infective_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antiviral Agents",
+      "display_name_embedding": [],
+      "documentation": "Substances used in managing viral infections by inhibiting specific phases of the viral life cycle, including cellular entry, uncoating, replication, and egress.",
+      "object_name": "antiviral_agents",
+      "umls_concept_id": "C0003456",
+      "umls_source_id": [
+        "MeSH:D000998",
+        "ATC:J05"
+      ]
+    }
+  },
+  "nucleoside_reverse_transcriptase_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antiviral_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Nucleoside Reverse Transcriptase Inhibitors (NRTIs)",
+      "display_name_embedding": [],
+      "documentation": "Purine or pyrimidine nucleoside analogues that act as chain terminators during retroviral viral reverse transcription of RNA into proviral DNA.",
+      "object_name": "nucleoside_reverse_transcriptase_inhibitors",
+      "umls_concept_id": "C0162464",
+      "umls_source_id": [
+        "MeSH:D019380",
+        "ATC:J05AF"
+      ]
+    }
+  },
+  "antifungal_agents": {
+    "children": [
+      "triazole_antifungals"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [
+      "anti_infective_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antifungal Agents",
+      "display_name_embedding": [],
+      "documentation": "Medicinal preparations designed to eradicate or prevent fungal infections by targeting fungal cell membranes, ergosterol synthesis, or cell wall beta-glucan polymers.",
+      "object_name": "antifungal_agents",
+      "umls_concept_id": "C0003303",
+      "umls_source_id": [
+        "MeSH:D000935",
+        "ATC:J02"
+      ]
+    }
+  },
+  "triazole_antifungals": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antifungal_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Triazole Antifungals",
+      "display_name_embedding": [],
+      "documentation": "Synthetic azole compounds containing a five-membered diunsaturated ring with three nitrogen atoms, inhibiting lanosterol 14-alpha-demethylase (CYP51).",
+      "object_name": "triazole_antifungals",
+      "umls_concept_id": "C0080136",
+      "umls_source_id": [
+        "MeSH:D014230",
+        "ATC:J02AC"
+      ]
+    }
+  },
+  "antineoplastic_and_immunomodulating_agents": {
+    "children": [
+      "monoclonal_antibodies_antineoplastic",
+      "immune_checkpoint_inhibitors",
+      "tyrosine_kinase_inhibitors"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antineoplastic and Immunomodulating Agents",
+      "display_name_embedding": [],
+      "documentation": "Substances used to treat malignant neoplasms or modulate host immune responsiveness, including cytostatics, targeted kinase inhibitors, and biologics.",
+      "object_name": "antineoplastic_and_immunomodulating_agents",
+      "umls_concept_id": "C0003417",
+      "umls_source_id": [
+        "MeSH:D000970",
+        "ATC:L"
+      ]
+    }
+  },
+  "monoclonal_antibodies_antineoplastic": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antineoplastic_and_immunomodulating_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Antineoplastic Monoclonal Antibodies",
+      "display_name_embedding": [],
+      "documentation": "Engineered immunoglobulins targeting tumor-specific antigens to trigger antibody-dependent cellular cytotoxicity, complement activation, or signaling pathway interruption.",
+      "object_name": "monoclonal_antibodies_antineoplastic",
+      "umls_concept_id": "C0085293",
+      "umls_source_id": [
+        "MeSH:D020543",
+        "ATC:L01XC"
+      ]
+    }
+  },
+  "immune_checkpoint_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antineoplastic_and_immunomodulating_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Immune Checkpoint Inhibitors",
+      "display_name_embedding": [],
+      "documentation": "Immunotherapeutic antibodies that disinhibit cytotoxic T cells by blocking regulatory co-inhibitory receptors such as PD-1, PD-L1, or CTLA-4.",
+      "object_name": "immune_checkpoint_inhibitors",
+      "umls_concept_id": "C4086604",
+      "umls_source_id": [
+        "MeSH:D000074322",
+        "ATC:L01FF"
+      ]
+    }
+  },
+  "tyrosine_kinase_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antineoplastic_and_immunomodulating_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Tyrosine Kinase Inhibitors (TKIs)",
+      "display_name_embedding": [],
+      "documentation": "Small-molecule pharmaceuticals that competitively block ATP-binding catalytic domains of receptor or non-receptor tyrosine kinases involved in oncogenic signaling.",
+      "object_name": "tyrosine_kinase_inhibitors",
+      "umls_concept_id": "C0935987",
+      "umls_source_id": [
+        "MeSH:D047428",
+        "ATC:L01EX"
+      ]
+    }
+  },
+  "antidiabetic_agents": {
+    "children": [
+      "glp1_receptor_agonists",
+      "sglt2_inhibitors",
+      "sulfonylureas"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Antidiabetic Agents",
+      "display_name_embedding": [],
+      "documentation": "Pharmaceutical compounds indicated to restore glycemic control and reduce microvascular and macrovascular complications in patients with diabetes mellitus.",
+      "object_name": "antidiabetic_agents",
+      "umls_concept_id": "C0020302",
+      "umls_source_id": [
+        "MeSH:D007004",
+        "ATC:A10"
+      ]
+    }
+  },
+  "glp1_receptor_agonists": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antidiabetic_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "GLP-1 Receptor Agonists",
+      "display_name_embedding": [],
+      "documentation": "Incretin mimetics that bind the glucagon-like peptide-1 receptor, augmenting glucose-dependent insulin secretion, suppressing glucagon, and slowing gastric emptying.",
+      "object_name": "glp1_receptor_agonists",
+      "umls_concept_id": "C3539893",
+      "umls_source_id": [
+        "MeSH:D000067759",
+        "ATC:A10BJ"
+      ]
+    }
+  },
+  "sglt2_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antidiabetic_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Sodium-Glucose Cotransporter 2 (SGLT2) Inhibitors",
+      "display_name_embedding": [],
+      "documentation": "Oral hypoglycemic agents that inhibit renal SGLT2 in the proximal convoluted tubule, inducing glucosuria and osmotic diuresis.",
+      "object_name": "sglt2_inhibitors",
+      "umls_concept_id": "C3887557",
+      "umls_source_id": [
+        "MeSH:D000077203",
+        "ATC:A10BK"
+      ]
+    }
+  },
+  "sulfonylureas": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "antidiabetic_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Sulfonylureas",
+      "display_name_embedding": [],
+      "documentation": "Secretagogue oral antidiabetic agents that bind the SUR1 subunit of ATP-sensitive potassium channels in pancreatic beta cells, triggering endogenous insulin release.",
+      "object_name": "sulfonylureas",
+      "umls_concept_id": "C0038750",
+      "umls_source_id": [
+        "MeSH:D013453",
+        "ATC:A10BB"
+      ]
+    }
+  },
+  "gastrointestinal_agents": {
+    "children": [
+      "proton_pump_inhibitors"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Gastrointestinal Agents",
+      "display_name_embedding": [],
+      "documentation": "Pharmacological preparations utilized to treat pathology of the gastrointestinal tract, including acid secretion disorders, motility dysfunction, and inflammatory states.",
+      "object_name": "gastrointestinal_agents",
+      "umls_concept_id": "C0017187",
+      "umls_source_id": [
+        "MeSH:D005765",
+        "ATC:A"
+      ]
+    }
+  },
+  "proton_pump_inhibitors": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "gastrointestinal_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Proton Pump Inhibitors (PPIs)",
+      "display_name_embedding": [],
+      "documentation": "Substituted benzimidazoles that irreversibly inhibit the H+/K+-ATPase enzyme system in gastric parietal cells, blocking terminal hydrochloric acid secretion.",
+      "object_name": "proton_pump_inhibitors",
+      "umls_concept_id": "C0149959",
+      "umls_source_id": [
+        "MeSH:D054328",
+        "ATC:A02BC"
+      ]
+    }
+  },
+  "respiratory_system_agents": {
+    "children": [
+      "inhaled_corticosteroids"
+    ],
+    "children_embeddings": [
+      [0.0, 0.0]
+    ],
+    "parents": [],
+    "parents_embeddings": [],
+    "metadata": {
+      "app_drug_category": "therapeutic category",
+      "display_name": "Respiratory System Agents",
+      "display_name_embedding": [],
+      "documentation": "Medicinal agents acting upon the lungs and airways to manage obstructive, restrictive, or inflammatory pulmonary diseases.",
+      "object_name": "respiratory_system_agents",
+      "umls_concept_id": "C0035235",
+      "umls_source_id": [
+        "MeSH:D012121",
+        "ATC:R"
+      ]
+    }
+  },
+  "inhaled_corticosteroids": {
+    "children": [],
+    "children_embeddings": [],
+    "parents": [
+      "respiratory_system_agents"
+    ],
+    "parents_embeddings": [
+      [0.0, 0.0]
+    ],
+    "metadata": {
+      "app_drug_category": "drug class",
+      "display_name": "Inhaled Corticosteroids (ICS)",
+      "display_name_embedding": [],
+      "documentation": "Topically delivered glucocorticoid receptor agonists that suppress airway inflammation, reduce mucosal edema, and decrease bronchial hyperresponsiveness.",
+      "object_name": "inhaled_corticosteroids",
+      "umls_concept_id": "C0872224",
+      "umls_source_id": [
+        "MeSH:D000893",
+        "ATC:R03BA"
+      ]
+    }
+  }
+}

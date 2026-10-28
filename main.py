@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -109,7 +110,14 @@ def main():
 
         try:
             print("Fetching NCT trial and generating definition...", flush=True)
-            result = pipeline.run(term=term, nct_ids=nct_ids)
+            result: dict = {}
+            asyncio.run(
+                pipeline._run_staged_async(
+                    term=term,
+                    nct_ids=nct_ids,
+                    on_stage=lambda updates, target=result: target.update(updates),
+                )
+            )
 
         except Exception as e:
             print(f"ERROR: {e}\n", flush=True)

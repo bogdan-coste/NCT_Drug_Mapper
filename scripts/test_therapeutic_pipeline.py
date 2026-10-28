@@ -1,3 +1,4 @@
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -45,7 +46,18 @@ for TERM, NCT_IDS in TEST_CASES:
     print(f"NCT IDs: {', '.join(NCT_IDS)}")
     print(f"{'=' * 60}\n")
 
-    result = pipeline.run(term=TERM, nct_ids=NCT_IDS)
+    result: dict = {}
+    try:
+        asyncio.run(
+            pipeline._run_staged_async(
+                term=TERM,
+                nct_ids=NCT_IDS,
+                on_stage=lambda updates, target=result: target.update(updates),
+            )
+        )
+    except Exception as exc:
+        print(f"ERROR: {exc}")
+        continue
 
     if "error" in result:
         print(f"ERROR: {result['error']}")

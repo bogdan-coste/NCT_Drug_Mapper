@@ -216,21 +216,16 @@ class NCItCandidateListExtractor:
             PromptTemplates.NCIT_CANDIDATE_LIST_SYSTEM_PROMPT
         )
 
-    def extract(
+    def _build_prompt(
         self,
         term: str,
         nct_ids: list[str],
         context: str,
-    ) -> "NCItIdentityResolution":
-        """
-        Resolve the intervention term and return a structured identity dict.
-
-        Always returns an NCItIdentityResolution, falling back to unresolved
-        when the LLM is unavailable or returns unparseable output.
-        """
+    ) -> tuple[str, str]:
+        """Return (normalized_term, user_prompt); an empty prompt means skip."""
         normalized_term = " ".join(str(term).split()).strip()
         if not normalized_term:
-            return self._fallback(normalized_term)
+            return normalized_term, ""
 
         normalized_nct_ids = [
             str(nct_id).strip().upper()
@@ -244,7 +239,14 @@ class NCItCandidateListExtractor:
             context=str(context).strip(),
         )
 
-        response = self._llm.ask_llm(user_msg)
+        return normalized_term, user_msg
+
+    def _parse(
+        self,
+        response: str | None,
+        normalized_term: str,
+    ) -> NCItIdentityResolution:
+        """Validate one raw LLM response into NCItIdentityResolution."""
         if not response:
             return self._fallback(normalized_term)
 
@@ -281,6 +283,37 @@ class NCItCandidateListExtractor:
             flush=True,
         )
         return resolution
+
+    def extract(
+        self,
+        term: str,
+        nct_ids: list[str],
+        context: str,
+    ) -> "NCItIdentityResolution":
+        """
+        Resolve the intervention term and return a structured identity dict.
+
+        Always returns an NCItIdentityResolution, falling back to unresolved
+        when the LLM is unavailable or returns unparseable output.
+        """
+        normalized_term, user_msg = self._build_prompt(term, nct_ids, context)
+        if not user_msg:
+            return self._fallback(normalized_term)
+
+        return self._parse(self._llm.ask_llm(user_msg), normalized_term)
+
+    async def extract_async(
+        self,
+        term: str,
+        nct_ids: list[str],
+        context: str,
+    ) -> NCItIdentityResolution:
+        """Async twin of extract, awaited from the async pipeline."""
+        normalized_term, user_msg = self._build_prompt(term, nct_ids, context)
+        if not user_msg:
+            return self._fallback(normalized_term)
+
+        return self._parse(await self._llm.ask_llm_async(user_msg), normalized_term)
 
     @staticmethod
     def _fallback(term: str) -> NCItIdentityResolution:

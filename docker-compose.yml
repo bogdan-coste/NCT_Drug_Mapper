@@ -73,6 +73,10 @@ services:
       # Containers communicate using the Compose service name.
       QDRANT_URL: http://qdrant:6333
 
+      # PostgreSQL runs on the host machine, not inside this container.
+      # "localhost" would point at this container itself.
+      DB_HOST: host.docker.internal
+
       # SapBERT is started inside this same application container.
       SAPBERT_BASE_URL: http://localhost:7997/v1
 
@@ -81,6 +85,8 @@ services:
 
     ports:
       - "${SERVER_PORT:-8000}:8000"
+      # Exposed so host-side scripts (e.g. db_enrichment) can embed through it.
+      - "7997:7997"
 
     volumes:
       - ./models:/app/models
@@ -108,7 +114,7 @@ services:
     depends_on:
       - app
 
-    working_dir: /app
+    working_dir: /app/react
 
     environment:
       # vite.config.js proxies the API endpoints to this origin.
@@ -119,7 +125,7 @@ services:
 
     volumes:
       - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+      - frontend_node_modules:/app/react/node_modules
 
     ports:
       - "5173:5173"

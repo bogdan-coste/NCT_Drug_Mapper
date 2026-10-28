@@ -5,9 +5,6 @@ from typing import Literal
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
-# ── NCIt identity-resolution schema ──────────────────────────────────────────
-
 ResolutionKind = Literal[
     "single_product",
     "regimen",
@@ -49,7 +46,6 @@ ComponentType = Literal[
     "device",
     "other",
 ]
-
 
 class NCItIdentityMatch(BaseModel):
     model_config = ConfigDict(
@@ -121,89 +117,6 @@ def _extract_reference_title(citation: str) -> str:
     if second_dot == -1:
         return after_authors.strip()
     return after_authors[:second_dot].strip()
-
-
-class InternalDrugClassMapping(BaseModel):
-    """Internal result returned by the drug-class mapping call."""
-
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
-
-    selected_term: str = Field(
-        description=(
-            "Exact supplied drug-class candidate name, or "
-            "NONE_OF_THE_ABOVE when no compatible candidate exists."
-        )
-    )
-
-    compatibility: Literal[
-        "directly_compatible",
-        "broader_compatible",
-        "related_compatible",
-        "none",
-    ]
-
-    match_type: Literal[
-        "exact",
-        "equivalent_label",
-        "broader_available",
-        "nearest_available",
-        "none",
-    ]
-
-    reason: str
-
-    @field_validator("selected_term", "reason")
-    @classmethod
-    def normalize_text(cls, value: str) -> str:
-        return " ".join(value.split())
-
-    @model_validator(mode="after")
-    def validate_internal_consistency(
-        self,
-    ) -> "InternalDrugClassMapping":
-        valid_combinations = {
-            "directly_compatible": {
-                "exact",
-                "equivalent_label",
-            },
-            "broader_compatible": {
-                "broader_available",
-            },
-            "related_compatible": {
-                "nearest_available",
-            },
-            "none": {
-                "none",
-            },
-        }
-
-        if self.match_type not in valid_combinations[
-            self.compatibility
-        ]:
-            raise ValueError(
-                "match_type is inconsistent with compatibility"
-            )
-
-        selected_is_none = (
-            self.selected_term == "NONE_OF_THE_ABOVE"
-        )
-
-        if self.compatibility == "none":
-            if not selected_is_none:
-                raise ValueError(
-                    "compatibility=none requires "
-                    "selected_term=NONE_OF_THE_ABOVE"
-                )
-        elif selected_is_none:
-            raise ValueError(
-                "A compatible mapping must select a supplied "
-                "drug-class candidate"
-            )
-
-        return self
 
 class InternalOntologyMapping(BaseModel):
     """Internal result returned by the third LLM call."""
@@ -289,106 +202,6 @@ class InternalOntologyMapping(BaseModel):
 
 
 # ── NCT Drug Context Models ───────────────────────────────────────────────────
-
-class DrugClassRetrievalSuggestion(BaseModel):
-    """
-    Molecular, structural, biochemical, or compositional retrieval
-    queries extracted from a composition-centered intervention
-    definition.
-
-    These queries improve candidate retrieval and do not assert
-    ontology parent-child relationships.
-    """
-
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
-
-    primary_query: str = Field(
-        description=(
-            "The single best and most specific molecular, structural, "
-            "biochemical, or compositional drug-class retrieval query "
-            "explicitly supported by the intervention definition. "
-            "Do not infer composition from modality, target, indication, "
-            "delivery system, route, product name, or development code. "
-            "Use an empty string when no drug-class query is supported."
-        )
-    )
-
-    alternative_queries: list[str] = Field(
-        default_factory=list,
-        description=(
-            "Up to two complementary drug-class retrieval queries "
-            "explicitly supported by the intervention definition. "
-            "They are retrieval aids and do not assert ontology "
-            "parent-child relationships."
-        )
-    )
-
-    @field_validator("primary_query")
-    @classmethod
-    def normalize_primary_query(cls, value: str) -> str:
-        return " ".join(value.split())
-
-    @field_validator("alternative_queries", mode="before")
-    @classmethod
-    def validate_alternatives_input(
-        cls,
-        value: object,
-    ) -> object:
-        if value is None:
-            return []
-
-        if not isinstance(value, list):
-            raise ValueError(
-                "alternative_queries must be a JSON array"
-            )
-
-        return value
-
-    @field_validator("alternative_queries")
-    @classmethod
-    def normalize_alternative_queries(
-        cls,
-        values: list[str],
-    ) -> list[str]:
-        result: list[str] = []
-        seen: set[str] = set()
-
-        for value in values:
-            normalized = " ".join(str(value).split()).strip()
-
-            if not normalized:
-                continue
-
-            key = normalized.casefold()
-
-            if key in seen:
-                continue
-
-            seen.add(key)
-            result.append(normalized)
-
-        return result[:2]
-
-    @model_validator(mode="after")
-    def remove_primary_duplicate(
-        self,
-    ) -> "DrugClassRetrievalSuggestion":
-        if not self.primary_query:
-            self.alternative_queries = []
-            return self
-
-        primary_key = self.primary_query.casefold()
-
-        self.alternative_queries = [
-            query
-            for query in self.alternative_queries
-            if query.casefold() != primary_key
-        ]
-
-        return self
 
 class TherapeuticCategorySuggestion(BaseModel):
     """
@@ -691,12 +504,10 @@ class QdrantParameters:
         self,
         url: str,
         collection_name: str,
-        drug_class_collection_name: str,
         api_key: str = "",
     ):
         self.url = url
         self.collection_name = collection_name
-        self.drug_class_collection_name = drug_class_collection_name
         self.api_key = api_key
 
     @classmethod
@@ -706,9 +517,6 @@ class QdrantParameters:
             collection_name=os.getenv(
                 "QDRANT_COLLECTION",
                 "",
-            ),
-            drug_class_collection_name=os.getenv(
-                "DRUG_CLASS_QDRANT_COLLECTION", ""
             ),
             api_key=os.getenv("QDRANT_API_KEY", ""),
         )
@@ -741,6 +549,25 @@ class ServerParameters:
         )
 
 
+class DatabaseParameters:
+    def __init__(self,
+        url: str = "",
+        min_pool_size: int = 1,
+        max_pool_size: int = 10,
+    ):
+        self.url = url
+        self.min_pool_size = min_pool_size
+        self.max_pool_size = max_pool_size
+
+    @classmethod
+    def from_env(cls) -> "DatabaseParameters":
+        return cls(
+            url=os.getenv("DATABASE_URL", ""),
+            min_pool_size=_env_int("DATABASE_POOL_MIN", 1),
+            max_pool_size=_env_int("DATABASE_POOL_MAX", 10),
+        )
+
+
 class AppConfig:
     def __init__(self,
         llm: LLMParameters,
@@ -748,12 +575,14 @@ class AppConfig:
         paths: PathParameters,
         server: ServerParameters,
         qdrant: QdrantParameters,
+        database: DatabaseParameters,
     ):
         self.llm = llm
         self.sapbert = sapbert
         self.paths = paths
         self.server = server
         self.qdrant = qdrant
+        self.database = database
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -764,4 +593,5 @@ class AppConfig:
             paths=PathParameters.from_env(),
             server=ServerParameters.from_env(),
             qdrant=QdrantParameters.from_env(),
+            database=DatabaseParameters.from_env(),
         )

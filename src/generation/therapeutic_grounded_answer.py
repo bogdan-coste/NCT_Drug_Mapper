@@ -57,6 +57,31 @@ class DefinitionGenerator:
 
         return self._llm.ask_llm(user_msg)
 
+    async def generate_async(
+        self,
+        term: str,
+        nct_ids: list[str],
+        context: str,
+    ) -> str | None:
+        """Async twin of generate, awaited from the async pipeline."""
+        normalized_nct_ids = [
+            str(nct_id).strip().upper()
+            for nct_id in nct_ids
+            if str(nct_id).strip()
+        ]
+
+        user_msg = (
+            PromptTemplates
+            .NCT_DEFINITION_GENERATION_TEMPLATE
+            .substitute(
+                term=term,
+                nct_ids=", ".join(normalized_nct_ids),
+                context=context,
+            )
+        )
+
+        return await self._llm.ask_llm_async(user_msg)
+
 
 class TherapeuticCategorySuggester:
     """
@@ -77,6 +102,17 @@ class TherapeuticCategorySuggester:
 
         return self._llm.ask_llm(user_msg)
 
+    async def suggest_async(self, definition: str) -> str | None:
+        """Async twin of suggest, awaited from the async pipeline."""
+        user_msg = (
+            PromptTemplates
+            .THERAPEUTIC_CATEGORY_SUGGESTION_TEMPLATE
+            .substitute(definition=definition)
+        )
+
+        return await self._llm.ask_llm_async(user_msg)
+
+
 class OntologyMapper:
     """
     Step 3 — Given a definition, a suggested superclass, and 20 SapBERT
@@ -87,25 +123,13 @@ class OntologyMapper:
         self._llm = llm
         self._llm.system_prompt = PromptTemplates.ONTOLOGY_MAPPING_SYSTEM_PROMPT
 
-    def map(
-        self,
+    @staticmethod
+    def _build_prompt(
         definition: str,
         superclass: str,
         candidates: list[dict],
-    ) -> str | None:
-        """
-        Select the best ontology term from SapBERT candidates.
-
-        Args:
-            definition:  The definition generated in Step 1.
-            superclass:  The suggested superclass label from Step 2.
-            candidates:  List of dicts with 'name' and 'documentation' keys.
-
-        Returns:
-            A JSON string with keys: selected_term, match_type, reason.
-            or None if the LLM fails to respond.
-        """
-
+    ) -> str:
+        """Render the mapping prompt from the candidate list."""
         lines = []
         for i, c in enumerate(candidates):
             line = f"{i + 1}. {c['name']}"
@@ -126,10 +150,41 @@ class OntologyMapper:
             lines.append(line)
         candidates_text = "\n".join(lines)
 
-        user_msg = PromptTemplates.ONTOLOGY_MAPPING_TEMPLATE.substitute(
+        return PromptTemplates.ONTOLOGY_MAPPING_TEMPLATE.substitute(
             definition=definition,
             superclass=superclass,
             candidates=candidates_text,
         )
 
-        return self._llm.ask_llm(user_msg)
+    def map(
+        self,
+        definition: str,
+        superclass: str,
+        candidates: list[dict],
+    ) -> str | None:
+        """
+        Select the best ontology term from SapBERT candidates.
+
+        Args:
+            definition:  The definition generated in Step 1.
+            superclass:  The suggested superclass label from Step 2.
+            candidates:  List of dicts with 'name' and 'documentation' keys.
+
+        Returns:
+            A JSON string with keys: selected_term, match_type, reason.
+            or None if the LLM fails to respond.
+        """
+        return self._llm.ask_llm(
+            self._build_prompt(definition, superclass, candidates)
+        )
+
+    async def map_async(
+        self,
+        definition: str,
+        superclass: str,
+        candidates: list[dict],
+    ) -> str | None:
+        """Async twin of map, awaited from the async pipeline."""
+        return await self._llm.ask_llm_async(
+            self._build_prompt(definition, superclass, candidates)
+        )

@@ -3,13 +3,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from uuid import UUID
 
 import numpy as np
 from qdrant_client import QdrantClient, models
-
 
 DISPLAY_EMBEDDING_FIELDS = (
     "display_name_embedding",
@@ -19,6 +19,9 @@ DISPLAY_EMBEDDING_FIELDS = (
     "name_embedding",
 )
 
+# This project has no BioLORD model, so documentation is never embedded or
+# searched: it is stored as payload text. These names are kept only so that such
+# keys are stripped from the payload if a hierarchy file happens to carry them.
 DOCUMENTATION_EMBEDDING_FIELDS = (
     "documentation_embedding",
     "documentation_embeddings",
@@ -49,6 +52,10 @@ ALL_EMBEDDING_FIELDS = {
     *CHILDREN_EMBEDDING_FIELDS,
     *PARENTS_EMBEDDING_FIELDS,
 }
+
+# Anything smaller than this cannot be a real SapBERT vector and is almost
+# certainly a placeholder from a hand-written hierarchy file.
+MIN_PLAUSIBLE_DIMENSION = 16
 
 
 def parse_args() -> argparse.Namespace:
@@ -192,9 +199,8 @@ def validate_dimension(
         )
 
 
-def find_dimensions(hierarchy: dict[str, Any]) -> tuple[int, int]:
-    sapbert_size: int | None = None
-    biolord_size: int | None = None
+def find_sapbert_dimension(hierarchy: dict[str, Any]) -> int:
+    placeholder_size: int | None = None
 
     for entry in hierarchy.values():
         if not isinstance(entry, dict):
@@ -203,34 +209,35 @@ def find_dimensions(hierarchy: dict[str, Any]) -> tuple[int, int]:
         if not isinstance(metadata, dict):
             metadata = {}
 
-        if sapbert_size is None:
-            vector = extract_vector(entry, metadata, DISPLAY_EMBEDDING_FIELDS)
+        for candidates in (
+            DISPLAY_EMBEDDING_FIELDS,
+            CHILDREN_EMBEDDING_FIELDS,
+            PARENTS_EMBEDDING_FIELDS,
+        ):
+            vector = extract_vector(entry, metadata, candidates)
             if vector is None:
-                vector = extract_vector(entry, metadata, CHILDREN_EMBEDDING_FIELDS)
-            if vector is None:
-                vector = extract_vector(entry, metadata, PARENTS_EMBEDDING_FIELDS)
-            if vector is not None:
-                sapbert_size = len(vector)
+                continue
+            if len(vector) >= MIN_PLAUSIBLE_DIMENSION:
+                return len(vector)
+            placeholder_size = len(vector)
 
-        if biolord_size is None:
-            vector = extract_vector(entry, metadata, DOCUMENTATION_EMBEDDING_FIELDS)
-            if vector is not None:
-                biolord_size = len(vector)
-
-        if sapbert_size is not None and biolord_size is not None:
-            return sapbert_size, biolord_size
+    if placeholder_size is not None:
+        raise ValueError(
+            f"SapBERT embeddings have dimension {placeholder_size}, which looks like "
+            "placeholder data (for example [[0.0, 0.0]]). Run "
+            "scripts/db_enrichment/embed_therapeutic_definitions.py to fill them."
+        )
 
     raise ValueError(
-        "Could not determine the SapBERT and BioLORD vector dimensions. "
-        "Inspect the JSON embedding field names and add them to the candidate "
-        "field tuples near the top of this script."
+        "Could not determine the SapBERT vector dimension: no non-empty "
+        "display_name, children or parents embedding was found. Run "
+        "scripts/db_enrichment/embed_therapeutic_definitions.py first."
     )
 
 
 def point_iterator(
     hierarchy: dict[str, Any],
     sapbert_size: int,
-    biolord_size: int,
 ) -> Iterable[models.PointStruct]:
     for member_id, entry in hierarchy.items():
         if not isinstance(entry, dict):
@@ -245,9 +252,6 @@ def point_iterator(
             "display_name": extract_vector(
                 entry, metadata, DISPLAY_EMBEDDING_FIELDS
             ) or zero_vector(sapbert_size),
-            "documentation": extract_vector(
-                entry, metadata, DOCUMENTATION_EMBEDDING_FIELDS
-            ) or zero_vector(biolord_size),
             "children": extract_vector(
                 entry, metadata, CHILDREN_EMBEDDING_FIELDS
             ) or zero_vector(sapbert_size),
@@ -258,9 +262,6 @@ def point_iterator(
 
         validate_dimension(
             "display_name", vectors["display_name"], sapbert_size, member_id
-        )
-        validate_dimension(
-            "documentation", vectors["documentation"], biolord_size, member_id
         )
         validate_dimension(
             "children", vectors["children"], sapbert_size, member_id
@@ -289,7 +290,6 @@ def create_collection(
     client: QdrantClient,
     collection_name: str,
     sapbert_size: int,
-    biolord_size: int,
     recreate: bool,
 ) -> None:
     exists = client.collection_exists(collection_name)
@@ -299,17 +299,28 @@ def create_collection(
         client.delete_collection(collection_name)
         exists = False
 
+    expected = {
+        "display_name": sapbert_size,
+        "children": sapbert_size,
+        "parents": sapbert_size,
+    }
+
     if exists:
         info = client.get_collection(collection_name)
         configured = info.config.params.vectors
-        expected = {
-            "display_name": sapbert_size,
-            "documentation": biolord_size,
-            "children": sapbert_size,
-            "parents": sapbert_size,
-        }
+        if not isinstance(configured, dict):
+            raise ValueError(
+                f"Existing collection {collection_name!r} does not use named "
+                "vectors. Run again with --recreate to rebuild the collection."
+            )
+        if set(configured) != set(expected):
+            raise ValueError(
+                f"Existing collection has vectors {sorted(configured)}, expected "
+                f"{sorted(expected)}. Run again with --recreate to rebuild the "
+                "collection."
+            )
         for name, size in expected.items():
-            if name not in configured or configured[name].size != size:
+            if configured[name].size != size:
                 raise ValueError(
                     f"Existing collection has an incompatible {name!r} vector. "
                     "Run again with --recreate to rebuild the collection."
@@ -321,18 +332,10 @@ def create_collection(
     client.create_collection(
         collection_name=collection_name,
         vectors_config={
-            "display_name": models.VectorParams(
-                size=sapbert_size, distance=models.Distance.COSINE
-            ),
-            "documentation": models.VectorParams(
-                size=biolord_size, distance=models.Distance.COSINE
-            ),
-            "children": models.VectorParams(
-                size=sapbert_size, distance=models.Distance.COSINE
-            ),
-            "parents": models.VectorParams(
-                size=sapbert_size, distance=models.Distance.COSINE
-            ),
+            name: models.VectorParams(
+                size=size, distance=models.Distance.COSINE
+            )
+            for name, size in expected.items()
         },
     )
 
@@ -357,24 +360,22 @@ def main() -> None:
     if not isinstance(hierarchy, dict):
         raise ValueError("Expected the JSON root to be an object keyed by member ID.")
 
-    sapbert_size, biolord_size = find_dimensions(hierarchy)
+    sapbert_size = find_sapbert_dimension(hierarchy)
     print(f"Members: {len(hierarchy)}")
     print(f"SapBERT dimension: {sapbert_size}")
-    print(f"BioLORD dimension: {biolord_size}")
 
     client = QdrantClient(url=args.url, api_key=args.api_key, timeout=120)
     create_collection(
         client,
         args.collection,
         sapbert_size,
-        biolord_size,
         args.recreate,
     )
 
     print("Uploading points...")
     client.upload_points(
         collection_name=args.collection,
-        points=point_iterator(hierarchy, sapbert_size, biolord_size),
+        points=point_iterator(hierarchy, sapbert_size),
         batch_size=args.batch_size,
         parallel=1,
         max_retries=3,

@@ -1,17 +1,18 @@
-import json
+import asyncio
 import unicodedata
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import ValidationError
 
+from ...generation.term_extract_grounded_answer import NCItCandidateListExtractor
 from ...generation.therapeutic_grounded_answer import (
     DefinitionGenerator,
     OntologyMapper,
     TherapeuticCategorySuggester,
 )
-from ...generation.term_extract_grounded_answer import NCItCandidateListExtractor
-from ...ingestion.evs_loader import EVSLoader
+from ...ingestion.ncit_evs_loader import EVSLoader
 from ...ingestion.nct_loader import NCTLoader
+from ...ingestion.ols_loader import OLSLoader
 from ...llm.llm_client import LLMClient
 from ...retrieval.retriever import TherapeuticCategoryRetriever
 from ...schemas.models import (
@@ -23,9 +24,11 @@ from ...schemas.models import (
 
 
 class TherapeuticCategory:
-    """Map a drug or therapy term to a therapeutic ontology category."""
+    """
+        Map a drug or therapy term to a therapeutic ontology category.
+    """
 
-    _VALID_MAPPING_COMBINATIONS: dict[str, set[str]] = {
+    _VALID_MAPPING_COMBINATIONS: ClassVar[dict[str, set[str]]] = {
         "directly_compatible": {
             "exact",
             "equivalent_label",
@@ -51,6 +54,7 @@ class TherapeuticCategory:
         retriever: TherapeuticCategoryRetriever,
         term_extractor_llm: LLMClient | None = None,
         evs_loader: EVSLoader | None = None,
+        ols_loader: OLSLoader | None = None
     ) -> None:
         self._loader = nct_loader
         self._definition_generator = DefinitionGenerator(definition_llm)
@@ -63,10 +67,7 @@ class TherapeuticCategory:
             else None
         )
         self._evs_loader = evs_loader or EVSLoader()
-
-    @staticmethod
-    def _err(term: str, message: str, **extra: Any) -> dict[str, Any]:
-        return {"term": term, "error": message, **extra}
+        self._ols_loader = ols_loader or OLSLoader()
 
     @staticmethod
     def _normalize_labels(labels: list[str]) -> list[str]:
@@ -167,51 +168,13 @@ class TherapeuticCategory:
         }
 
     @staticmethod
-    # Variations of the prompt so we
-    # can identify the drug
-    def _expand_ncit_variants(term: str) -> list[str]:
-        """
-        When the primary NCIt search for a term returns no results, this
-        function generates simpler reformulations of the same term to try
-        next — in order, until one hits.
-
-        The reformulation rules are:
-
-        1. Remove parentheses
-           Strip anything in parentheses and search the bare name.
-           Also try each parenthetical clause on its own, in case it
-           is itself a known NCIt code or synonym.
-           "Mosunetuzumab (SC) (RO7030816)"
-             -> try "Mosunetuzumab", then "SC", then "RO7030816"
-           "Avutometinib (VS-6766)"
-             -> try "Avutometinib", then "VS-6766"
-
-        2. Split comma / "and" lists
-           When the term is a list of names joined by commas or "and",
-           try each name individually.
-           "LMP, BARF1 and EBNA1 specific CTLs"
-             -> try "LMP", then "BARF1", then "EBNA1 specific CTLs"
-
-        3. Combined
-           If a parenthetical clause is itself a list, it is also split.
-
-        4. CAR-T constructs — replace slashes with spaces, never split
-           When the term ends with a cell-type suffix (CAR T, T-cell,
-           T-lymphocyte, …), any slashes are part of the construct name
-           and must not be treated as separators. Instead, a space-separated
-           variant is tried because NCIt sometimes indexes these with spaces.
-           "EGFRt/19-28z/IL-12 CAR T-lymphocyte"
-             -> try "EGFRt 19-28z IL-12 CAR T-lymphocyte"
-        """
+    def _expand_variants(term: str) -> list[str]:
         import re
 
         variants: list[str] = []
         seen: set[str] = set()
         seen.add(term.casefold())
 
-        # Cell-type suffixes that signal a CAR-T / engineered-cell product.
-        # If the term ends with one of these words, slashes are construct
-        # separators, not drug-boundary separators.
         _CELL_TYPE_SUFFIXES = re.compile(
             r"\b(CAR[-\s]T|CAR\s+T[-\s]cell|CAR\s+T[-\s]lymphocyte|"
             r"T[-\s]cell|T[-\s]lymphocyte|NK\s+cell|stem\s+cell|"
@@ -224,19 +187,19 @@ class TherapeuticCategory:
             key = c.casefold()
             if not c or key in seen:
                 return
-            # Skip tokens that are too short to be useful NCIt search terms.
+
             if len(c) <= 3:
                 return
-            # Skip tokens that start with a digit — these are chemistry formula
-            # fragments (e.g. "1H", "3H" from "2,4(1H, 3H)-pyrimidinedione")
-            # rather than valid NCIt concept names.
+
             if re.match(r'^\d', c):
                 return
             seen.add(key)
             variants.append(c)
 
         def split_list(phrase: str) -> list[str]:
-            """Split on ', ' and ' and ' boundaries, trim each segment."""
+            """
+                Split on ', ' and ' and ' boundaries, trim each segment.
+            """
             normalised = re.sub(r"\band\b", ",", phrase)
             return [
                 seg.strip().strip(",")
@@ -244,35 +207,29 @@ class TherapeuticCategory:
                 if seg.strip().strip(",")
             ]
 
-        # Strategy 4 first: detect CAR-T construct terms with slashes.
-        # These must NOT be split; instead add a slash→space variant.
         if "/" in term and _CELL_TYPE_SUFFIXES.search(term):
             slash_to_space = term.replace("/", " ")
             add(slash_to_space)
-            # Also try with the space-normalised form stripped of extra spaces.
+
             add(" ".join(slash_to_space.split()))
             return variants
 
-        # Find all parenthetical groups anywhere in the term.
         paren_matches = list(re.finditer(r"\(([^()]+)\)", term))
 
         if paren_matches:
-            # Strategy 1a: fully-stripped base (all parentheticals removed).
             fully_stripped = re.sub(r"\s*\([^()]+\)", "", term).strip()
             add(fully_stripped)
 
-            # Strategy 1b: each inside clause as its own candidate.
             for m in paren_matches:
                 inside = m.group(1).strip()
                 add(inside)
-                # Strategy 3: split list-valued inside clauses.
+
                 if "," in inside or re.search(r"\band\b", inside):
                     for segment in split_list(inside):
                         add(segment)
 
             return variants
 
-        # Strategy 2: list splitting (no parenthetical present).
         if "," in term or re.search(r"\band\b", term):
             segments = split_list(term)
             if len(segments) > 1:
@@ -281,183 +238,299 @@ class TherapeuticCategory:
 
         return variants
 
-    def _try_ncit_term(
+    _SOURCE_LOOKUP_TIMEOUT: ClassVar[float] = 30.0
+
+    def _ontology_sources(
         self,
-        candidate_term: str,
-    ) -> tuple[str, str, str] | None:
+    ) -> dict[str, tuple[EVSLoader | OLSLoader, str, dict[str, Any]]]:
         """
-        Return (definition, code, preferred name) for one NCIt term.
+            Describe the sources the unified lookup races.
 
-        When the primary search returns no hits and the term contains a
-        parenthetical annotation (e.g. "Avutometinib (VS-6766)"), automatically
-        retries with the base name and the code inside the parenthesis before
-        giving up.
+            Each entry pairs a loader with its display label and the extra
+            keyword arguments its search_results accepts. Adding a source means
+            adding one entry here; no other lookup code has to change.
         """
-        term_clean = " ".join(candidate_term.split()).strip()
-        if not term_clean:
-            return None
+        return {
+            "ncit": (self._evs_loader, "NCIt", {"match_type": EVSLoader.MATCH}),
+            "ols": (self._ols_loader, "OLS", {}),
+        }
 
-        # Build the ordered list of strings to try: primary term first,
-        # then any parenthetical variants.
-        candidates_to_try = [term_clean, *self._expand_ncit_variants(term_clean)]
+    @staticmethod
+    def _definition_text(record: dict[str, Any]) -> str:
+        """
+            Best available definition text in a loader record.
 
-        for search_str in candidates_to_try:
-            result = self._try_ncit_one(search_str, original_term=term_clean)
-            if result is not None:
-                return result
+            OLS normalises its payload to a plain definition string, while EVS
+            returns a definitions list whose entries carry a source. NCI's own
+            text is preferred when present.
+        """
+        definition = str(record.get("definition") or "").strip()
+        if definition:
+            return definition
 
-        print(
-            f"  [ncit] no definition found for {term_clean!r} "
-            f"(tried {len(candidates_to_try)} variant(s)).",
-            flush=True,
-        )
-        return None
+        definitions = record.get("definitions") or []
+        if not isinstance(definitions, list):
+            return ""
 
-    def _try_ncit_one(
+        fallback = ""
+        for entry in definitions:
+            if not isinstance(entry, dict):
+                continue
+            value = str(entry.get("definition") or "").strip()
+            if not value:
+                continue
+            if str(entry.get("source") or "").strip().upper() == "NCI":
+                return value
+            fallback = fallback or value
+        return fallback
+
+    @staticmethod
+    def _record_names(value: Any) -> list[str]:
+        """Flatten a synonym or parent list of strings or dicts into names."""
+
+        names: list[str] = []
+        for item in value or []:
+            text = (
+                str(item.get("name") or "").strip()
+                if isinstance(item, dict)
+                else str(item).strip()
+            )
+            if text:
+                names.append(text)
+        return names
+
+    @classmethod
+    def _pseudo_definition(
+        cls,
+        label: str,
+        code: str,
+        preferred_name: str,
+        record: dict[str, Any],
+    ) -> str:
+        """
+            Synthesize a definition from synonyms and parents when a source
+            carries no definition text of its own.
+        """
+        synonyms = [
+            name
+            for name in cls._record_names(record.get("synonyms"))
+            if name.casefold() != preferred_name.casefold()
+        ][:6]
+        parents = cls._record_names(record.get("parents"))[:4]
+
+        parts = [f"{preferred_name} ({label}: {code})."]
+        if synonyms:
+            parts.append(f"Also known as: {', '.join(synonyms)}.")
+        if parents:
+            parts.append(f"Subtype of: {', '.join(parents)}.")
+        return " ".join(parts) if len(parts) > 1 else ""
+
+    async def _search_source(
         self,
+        source: str,
+        loader: EVSLoader | OLSLoader,
         search_str: str,
         *,
-        original_term: str,
-    ) -> tuple[str, str, str] | None:
-        """
-            Single EVS lookup for one search string. Returns None on miss.
-        """
-        if search_str != original_term:
-            print(
-                f"  [ncit] retrying with variant: {search_str!r}"
-                f" (from {original_term!r})",
-                flush=True,
-            )
-        else:
-            print(f"  [ncit] searching NCIt for: {search_str!r}", flush=True)
+        label: str,
+        **search_kwargs: Any,
+    ) -> tuple[str, str, str, str] | None:
 
         try:
-            hits: list[dict] = self._evs_loader.search(
-                term=search_str,
+            hits: list[dict[str, Any]] = await loader.search_results(
+                search_str,
                 limit=5,
-                match_type=EVSLoader.MATCH,
+                **search_kwargs,
             )
         except Exception as exc:
             print(
-                f"  [ncit] EVS match search failed for {search_str!r}: {exc}",
+                f"  [{source}] search failed for {search_str!r}: {exc}",
                 flush=True,
             )
             return None
 
         if not hits:
-            print(f"  [ncit] no hits for {search_str!r}.", flush=True)
+            print(f"  [{source}] no hits for {search_str!r}.", flush=True)
             return None
 
-        print(f"  [ncit] {len(hits)} hit(s) for {search_str!r}.", flush=True)
+        print(f"  [{source}] {len(hits)} hit(s) for {search_str!r}.", flush=True)
 
-        # First pass: fetch each concept and look for a real definition.
-        fetched_concepts: list[tuple[str, str, dict]] = []  # (code, preferred_name, concept)
+        without_definition: list[tuple[str, str, dict[str, Any]]] = []
         for hit in hits:
+            if hit.get("is_obsolete"):
+                continue
             code = str(hit.get("code") or hit.get("Code") or "").strip()
             preferred_name = str(hit.get("name") or "").strip()
-            if not code:
-                continue
-            try:
-                concept = self._evs_loader.get_concept(code)
-            except Exception as exc:
-                print(f"  [ncit] get_concept({code}) failed: {exc}", flush=True)
+            if not code or not preferred_name:
                 continue
 
-            fetched_concepts.append((code, preferred_name, concept))
-
-            definitions = concept.get("definitions") or []
-            if not isinstance(definitions, list):
-                continue
-
-            for defn in definitions:
-                if not isinstance(defn, dict):
-                    continue
-                source = str(defn.get("source") or "").strip().upper()
-                value = str(defn.get("definition") or "").strip()
-                if value and source == "NCI":
+            record = hit
+            definition = self._definition_text(hit)
+            if not definition:
+                try:
+                    record = await loader.get_concept(code) or {}
+                except Exception as exc:
                     print(
-                        f"  [ncit] NCI definition on {code} "
-                        f"({preferred_name}): {value[:80]!r}",
+                        f"  [{source}] get_concept({code}) failed: {exc}",
                         flush=True,
                     )
-                    return value, code, preferred_name
-
-            for defn in definitions:
-                if not isinstance(defn, dict):
                     continue
-                value = str(defn.get("definition") or "").strip()
-                if value:
-                    print(
-                        f"  [ncit] non-NCI definition on {code} "
-                        f"({preferred_name}): {value[:80]!r}",
-                        flush=True,
-                    )
-                    return value, code, preferred_name
+                definition = self._definition_text(record)
 
-        # Second pass: no real definition found; try to synthesize a
-        # pseudo-definition from preferred name, synonyms, and parent classes.
-        for code, preferred_name, concept in fetched_concepts:
-            parts: list[str] = [f"{preferred_name} (NCIt: {code})."]
-
-            synonyms = concept.get("synonyms") or []
-            syn_names = list(dict.fromkeys(
-                str(s.get("name") or "").strip()
-                for s in synonyms
-                if isinstance(s, dict)
-                and str(s.get("name") or "").strip()
-                and str(s.get("name") or "").strip().casefold() != preferred_name.casefold()
-            ))[:6]
-            if syn_names:
-                parts.append(f"Also known as: {', '.join(syn_names)}.")
-
-            parents = concept.get("parents") or []
-            parent_names = [
-                str(p.get("name") or "").strip()
-                for p in parents
-                if isinstance(p, dict) and str(p.get("name") or "").strip()
-            ][:4]
-            if parent_names:
-                parts.append(f"Subtype of: {', '.join(parent_names)}.")
-
-            if len(parts) > 1:
-                pseudo_def = " ".join(parts)
+            if definition:
                 print(
-                    f"  [ncit] no definition on {code} ({preferred_name}); "
-                    f"synthesized pseudo-definition from synonyms/parents.",
+                    f"  [{source}] definition on {code} "
+                    f"({preferred_name}): {definition[:80]!r}",
                     flush=True,
                 )
-                return pseudo_def, code, preferred_name
+                return definition, code, preferred_name, source
+
+            without_definition.append((code, preferred_name, record))
+
+        for code, preferred_name, record in without_definition:
+            pseudo = self._pseudo_definition(label, code, preferred_name, record)
+            if not pseudo:
+                continue
+            print(
+                f"  [{source}] no definition on {code} ({preferred_name}); "
+                f"synthesized pseudo-definition.",
+                flush=True,
+            )
+            return pseudo, code, preferred_name, source
 
         print(
-            f"  [ncit] hit(s) for {search_str!r} but none carried a definition.",
+            f"  [{source}] hit(s) for {search_str!r} but none carried a definition.",
             flush=True,
         )
         return None
 
-    def _fetch_ncit_component_definitions(
+    async def _lookup_term(
+        self,
+        candidate_term: str,
+    ) -> tuple[str, str, str, str] | None:
+
+        term_clean = " ".join(candidate_term.split()).strip()
+        if not term_clean:
+            return None
+
+        variants = [term_clean, *self._expand_variants(term_clean)]
+
+        for search_str in variants:
+            if search_str != term_clean:
+                print(
+                    f"  [lookup] retrying with variant: {search_str!r} "
+                    f"(from {term_clean!r})",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"  [lookup] searching sources for: {search_str!r}",
+                    flush=True,
+                )
+
+            pending: dict[asyncio.Task, str] = {
+                asyncio.create_task(
+                    self._search_source(
+                        source,
+                        loader,
+                        search_str,
+                        label=label,
+                        **search_kwargs,
+                    )
+                ): source
+                for source, (loader, label, search_kwargs) in (
+                    self._ontology_sources().items()
+                )
+            }
+
+            try:
+                async with asyncio.timeout(self._SOURCE_LOOKUP_TIMEOUT):
+                    while pending:
+                        done, _ = await asyncio.wait(
+                            pending,
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        for task in done:
+                            source = pending.pop(task)
+                            try:
+                                result = task.result()
+                            except Exception as exc:
+                                print(
+                                    f"  [lookup] {source} failed for "
+                                    f"{search_str!r}: {exc}",
+                                    flush=True,
+                                )
+                                continue
+
+                            if result is None:
+                                print(
+                                    f"  [lookup] {source} found nothing for "
+                                    f"{search_str!r}.",
+                                    flush=True,
+                                )
+                                continue
+
+                            definition, code, preferred_name, winner = result
+                            print(
+                                f"  [lookup] {winner} answered first for "
+                                f"{search_str!r} with {code} ({preferred_name}).",
+                                flush=True,
+                            )
+                            return definition, code, preferred_name, winner
+            except TimeoutError:
+                print(
+                    f"  [lookup] no source answered within "
+                    f"{self._SOURCE_LOOKUP_TIMEOUT:.0f}s for {search_str!r}.",
+                    flush=True,
+                )
+            finally:
+                for task in pending:
+                    task.cancel()
+                if pending:
+                    await asyncio.gather(*pending, return_exceptions=True)
+
+        print(
+            f"  [lookup] no definition found for {term_clean!r} "
+            f"(tried {len(variants)} variant(s)).",
+            flush=True,
+        )
+        return None
+
+
+    async def _fetch_cohort_component_definitions_async(
         self,
         components: list[str],
     ) -> list[dict[str, str]]:
-        """Resolve every regimen component independently in NCIt."""
-        resolved: list[dict[str, str]] = []
-        seen: set[str] = set()
+        """
+            Async twin of _fetch_cohort_component_definitions.
 
+            Components are independent, so they are resolved concurrently
+            instead of one after another.
+        """
+        unique: list[str] = []
+        seen: set[str] = set()
         for component in components:
             component_clean = " ".join(str(component).split()).strip()
             key = component_clean.casefold()
             if not component_clean or key in seen:
                 continue
             seen.add(key)
+            unique.append(component_clean)
 
-            result = self._try_ncit_term(component_clean)
-            if result is None:
+        results = await asyncio.gather(
+            *(self._lookup_term(component) for component in unique),
+            return_exceptions=True,
+        )
+
+        resolved: list[dict[str, str]] = []
+        for component_clean, result in zip(unique, results):
+            if isinstance(result, BaseException) or result is None:
                 print(
-                    f"  [ncit] no component definition for: {component_clean!r}",
+                    f"  [lookup] no component definition for: {component_clean!r}",
                     flush=True,
                 )
                 continue
 
-            definition, code, preferred_name = result
+            definition, code, preferred_name, _source = result
             resolved.append(
                 {
                     "search_term": component_clean,
@@ -469,7 +542,7 @@ class TherapeuticCategory:
 
         return resolved
 
-    def _generate_multi_component_definition(
+    async def _generate_multi_component_definition_async(
         self,
         *,
         term: str,
@@ -479,7 +552,29 @@ class TherapeuticCategory:
         trial_context: str,
         unresolved_components: list[str] | None = None,
     ) -> str | None:
-        """Synthesize a definition for a regimen or composite product."""
+        """Async twin of _generate_multi_component_definition."""
+        return await self._definition_generator.generate_async(
+            term=term,
+            nct_ids=nct_ids,
+            context=self._multi_component_context(
+                term=term,
+                resolution_kind=resolution_kind,
+                component_concepts=component_concepts,
+                trial_context=trial_context,
+                unresolved_components=unresolved_components,
+            ),
+        )
+
+    @staticmethod
+    def _multi_component_context(
+        *,
+        term: str,
+        resolution_kind: str,
+        component_concepts: list[dict[str, str]],
+        trial_context: str,
+        unresolved_components: list[str] | None = None,
+    ) -> str:
+        """Render the prompt context for a regimen/composite definition."""
         component_evidence = "\n\n".join(
             (
                 f"COMPONENT SEARCH TERM: {concept['search_term']}\n"
@@ -496,7 +591,7 @@ class TherapeuticCategory:
                 "include by name only):\n"
                 + "\n".join(f"- {c}" for c in unresolved_components)
             )
-        context = (
+        return (
             "REQUESTED MULTI-COMPONENT INTERVENTION:\n"
             f"{term}\n\n"
             "RESOLUTION KIND:\n"
@@ -518,15 +613,12 @@ class TherapeuticCategory:
             "established efficacy, safety, superiority, or clinical benefit. "
             "Return only the definition."
         )
-        return self._definition_generator.generate(
-            term=term,
-            nct_ids=nct_ids,
-            context=context,
-        )
 
     @staticmethod
     def _identity_key(value: str) -> str:
-        """Mechanical comparison key; the LLM decides biomedical equivalence."""
+        """
+            Mechanical comparison key; the LLM decides biomedical equivalence.
+        """
         return " ".join(
             unicodedata.normalize("NFKC", str(value)).casefold().split()
         ).strip()
@@ -582,16 +674,16 @@ class TherapeuticCategory:
 
     @classmethod
     def _extract_identity_matches(cls, extracted: Any) -> list[dict[str, str]]:
-        """Normalize structured extractor output into match dictionaries.
-
-        Plain strings are rejected: the extractor must return structured dicts
-        so that matched_trial_name can be verified against the NCT records.
         """
-        # Primary path: typed Pydantic output.
+            Normalize structured extractor output into match dictionaries.
+
+            Plain strings are rejected: the extractor must return structured dicts
+            so that matched_trial_name can be verified against the NCT records.
+        """
+
         if isinstance(extracted, NCItIdentityResolution):
             return [m.model_dump() for m in extracted.matches]
 
-        # Legacy path: raw dict from old code or test stubs.
         if extracted is None:
             return []
         if isinstance(extracted, dict):
@@ -648,7 +740,9 @@ class TherapeuticCategory:
         extracted: Any,
         trials: list[NCTDrugContext],
     ) -> list[tuple[NCTDrugContext, Any, dict[str, str]]]:
-        """Accept only matches whose claimed trial name exists exactly."""
+        """
+            Accept only matches whose claimed trial name exists exactly.
+        """
         index: dict[str, list[tuple[NCTDrugContext, Any]]] = {}
         for trial in trials:
             for intervention in trial.interventions:
@@ -774,10 +868,11 @@ class TherapeuticCategory:
         resolution_kind: str,
         resolved_records: list[tuple[NCTDrugContext, Any, dict[str, str]]],
     ) -> list[tuple[NCTDrugContext, Any, dict[str, str]]]:
-        """Keep only records whose role is appropriate for the resolution_kind.
+        """
+            Keep only records whose role is appropriate for the resolution_kind.
 
-        Falls back to a key-based identity heuristic when the LLM omitted
-        roles, so records are never silently dropped on a prompt error.
+            Falls back to a key-based identity heuristic when the LLM omitted
+            roles, so records are never silently dropped on a prompt error.
         """
         allowed_roles: dict[str, set[str]] = {
             "single_product": {"requested_identity"},
@@ -787,7 +882,6 @@ class TherapeuticCategory:
         }
         required = allowed_roles.get(resolution_kind, set())
 
-        # Primary filter: use the role field when present.
         role_filtered = [
             record
             for record in resolved_records
@@ -796,9 +890,6 @@ class TherapeuticCategory:
         if role_filtered:
             return role_filtered
 
-        # Fallback: the LLM omitted roles.  For single_product, keep only
-        # matches whose search_term shares an identity key with the author term
-        # or whose relationship is not combination_component.
         if resolution_kind == "single_product":
             author_key = cls._identity_key(term)
             non_component_relationships = {
@@ -827,8 +918,6 @@ class TherapeuticCategory:
                 )
                 return fallback
 
-        # Last resort: return all records unchanged so the pipeline never
-        # silently fails due to a prompt-instruction omission.
         print(
             "  [identity] role field absent and heuristic produced no records; "
             "returning all resolved records unfiltered.",
@@ -846,114 +935,11 @@ class TherapeuticCategory:
             value = getattr(extracted, "resolution_kind", "")
         return str(value or "single_product").strip().casefold()
 
-    def map_definition(
-        self,
-        term: str,
-        definition: str,
-    ) -> dict[str, Any]:
-        """
-            Run steps 3–5 (category suggestion → retrieval → mapping) on a pre-built definition.
-        """
-        term = " ".join(str(term).split()).strip()
-        definition = " ".join(str(definition).split()).strip()
-        if not term:
-            return self._err(term, "term cannot be empty.")
-        if not definition:
-            return self._err(term, "definition cannot be empty.")
-
-        category_raw = self._category_suggester.suggest(definition=definition)
-        if not category_raw:
-            return self._err(term, "Therapeutic-category suggestion failed.", definition=definition)
-        try:
-            category_suggestion = TherapeuticCategorySuggestion.model_validate_json(
-                category_raw
-            )
-        except ValidationError as exc:
-            return self._err(
-                term,
-                f"Therapeutic-category suggestion validation failed: {exc}",
-                definition=definition,
-            )
-
-        category_labels = category_suggestion.model_dump()
-        category_context = json.dumps(
-            {
-                **category_labels,
-                "retrieval_scope": (
-                    "The candidate hierarchy contains functional therapeutic "
-                    "and pharmacological drug categories."
-                ),
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        labels = self._normalize_labels(
-            [
-                category_labels["specific_category"],
-                category_labels["broad_category"],
-                category_labels["root_category"],
-            ]
-        )
-        if not labels:
-            return self._err(
-                term,
-                "No usable labels were generated for ontology retrieval.",
-                definition=definition,
-                category_labels=category_labels,
-            )
-
-        candidates = self._retriever.retrieve_for_labels(
-            labels=labels,
-            per_label_k=20,
-            final_k=20,
-        )
-        if not candidates:
-            return self._err(
-                term,
-                "Qdrant retrieval returned no candidates.",
-                definition=definition,
-                category_labels=category_labels,
-            )
-
-        mapping_raw = self._ontology_mapper.map(
-            definition=definition,
-            superclass=category_context,
-            candidates=candidates,
-        )
-        if not mapping_raw:
-            return self._err(
-                term,
-                "Ontology mapping failed.",
-                definition=definition,
-                category_labels=category_labels,
-            )
-        try:
-            internal_mapping = InternalOntologyMapping.model_validate_json(mapping_raw)
-        except ValidationError as exc:
-            return self._err(
-                term,
-                f"Ontology mapping validation failed: {exc}",
-                definition=definition,
-                category_labels=category_labels,
-            )
-
-        ontology_mapping = self._validate_internal_mapping(
-            internal_mapping=internal_mapping,
-            candidates=candidates,
-        )
-        return {
-            "term": term,
-            "definition": definition,
-            "category_labels": category_labels,
-            "candidates": candidates,
-            "ontology_mapping": ontology_mapping,
-        }
-
-    def _run_staged(
+    async def _run_staged_async(
         self,
         term: str,
         nct_ids: list[str],
-        on_stage,   # callable(dict) — called after each stage with partial results
+        on_stage,
     ) -> None:
         """
         Execute the pipeline stage-by-stage, calling on_stage(partial_dict) after
@@ -979,23 +965,40 @@ class TherapeuticCategory:
         if self._candidate_extractor is None:
             raise ValueError("No LLM intervention-identity resolver is configured.")
 
-        # ── Stage 1: fetch NCT records & resolve identity ─────────────────────
         fetched_trials = []
         context_warnings = []
-        for nct_id in normalized_nct_ids:
+        raw_records = await asyncio.gather(
+            *(
+                asyncio.to_thread(self._loader.fetch_study, nct_id)
+                for nct_id in normalized_nct_ids
+            ),
+            return_exceptions=True,
+        )
+        for nct_id, raw in zip(normalized_nct_ids, raw_records):
+            if isinstance(raw, BaseException):
+                context_warnings.append(
+                    f"{nct_id}: failed to load or parse record: {raw}"
+                )
+                continue
             try:
-                raw = self._loader.fetch_study(nct_id)
                 trial = NCTDrugContext.from_api(raw)
-                fetched_trials.append(trial)
-                print(f"  [pipeline] {nct_id}: {len(trial.interventions)} intervention(s) found.", flush=True)
             except Exception as exc:
-                context_warnings.append(f"{nct_id}: failed to load or parse record: {exc}")
+                context_warnings.append(
+                    f"{nct_id}: failed to load or parse record: {exc}"
+                )
+                continue
+            fetched_trials.append(trial)
+            print(
+                f"  [pipeline] {nct_id}: "
+                f"{len(trial.interventions)} intervention(s) found.",
+                flush=True,
+            )
 
         if not fetched_trials:
             raise ValueError("No NCT records could be loaded.")
 
         raw_identity_context = self._build_raw_intervention_context(fetched_trials)
-        extracted = self._candidate_extractor.extract(
+        extracted = await self._candidate_extractor.extract_async(
             term=term,
             nct_ids=normalized_nct_ids,
             context=raw_identity_context,
@@ -1047,9 +1050,9 @@ class TherapeuticCategory:
             )
             definition = None
             for cst in class_search_terms:
-                result = self._try_ncit_term(cst)
+                result = await self._lookup_term(cst)
                 if result is not None:
-                    definition, ncit_code, ncit_preferred_name = result
+                    definition, ncit_code, ncit_preferred_name, _source = result
                     ncit_search_term = cst
                     break
             if not definition:
@@ -1059,7 +1062,7 @@ class TherapeuticCategory:
             resolved_search_terms = class_search_terms
         else:
             definition_context = self._build_resolved_context(resolved_records)
-            definition = self._definition_generator.generate(
+            definition = await self._definition_generator.generate_async(
                 term=term,
                 nct_ids=normalized_nct_ids,
                 context=definition_context,
@@ -1081,10 +1084,10 @@ class TherapeuticCategory:
                 and len(resolved_search_terms) > 1
             ):
                 regimen_components = resolved_search_terms
-                ncit_component_concepts = self._fetch_ncit_component_definitions(regimen_components)
+                ncit_component_concepts = await self._fetch_cohort_component_definitions_async(regimen_components)
                 min_resolved = 2 if resolution_kind == "composite_product" else len(resolved_search_terms)
                 if len(ncit_component_concepts) >= min_resolved:
-                    synthesized = self._generate_multi_component_definition(
+                    synthesized = await self._generate_multi_component_definition_async(
                         term=term,
                         nct_ids=normalized_nct_ids,
                         resolution_kind=resolution_kind,
@@ -1099,16 +1102,16 @@ class TherapeuticCategory:
                 expanded_resolved = []
                 for rst in resolved_search_terms:
                     expanded_resolved.append(rst)
-                    for variant in self._expand_ncit_variants(rst):
+                    for variant in self._expand_variants(rst):
                         expanded_resolved.append(variant)
-                term_variants = self._expand_ncit_variants(term)
+                term_variants = self._expand_variants(term)
                 term_safety_net = [term, *term_variants] if not term_variants else term_variants
                 search_candidates = self._normalize_labels([*expanded_resolved, *term_safety_net])
                 for search_candidate in search_candidates:
-                    result = self._try_ncit_term(search_candidate)
+                    result = await self._lookup_term(search_candidate)
                     if result is None:
                         continue
-                    definition, ncit_code, ncit_preferred_name = result
+                    definition, ncit_code, ncit_preferred_name, _source = result
                     ncit_search_term = search_candidate
                     definition_source = "ncit"
                     break
@@ -1126,7 +1129,7 @@ class TherapeuticCategory:
         })
 
         # ── Stage 3: suggest therapeutic categories ───────────────────────────
-        category_raw = self._category_suggester.suggest(definition=definition)
+        category_raw = await self._category_suggester.suggest_async(definition=definition)
         if not category_raw:
             raise ValueError("Therapeutic-category suggestion failed.")
         try:
@@ -1158,11 +1161,15 @@ class TherapeuticCategory:
                 fallback.append(ncit_preferred_name)
             labels = self._normalize_labels(fallback)
 
-        candidates = self._retriever.retrieve_for_labels(labels=labels, per_label_k=20, final_k=20)
+        candidates = await self._retriever.retrieve_for_labels(
+            labels=labels,
+            per_label_k=20,
+            final_k=20,
+        )
         if not candidates:
             raise ValueError("Qdrant retrieval returned no candidates.")
 
-        mapping_raw = self._ontology_mapper.map(
+        mapping_raw = await self._ontology_mapper.map_async(
             definition=definition,
             superclass=category_context,
             candidates=candidates,
@@ -1183,420 +1190,3 @@ class TherapeuticCategory:
             "ontology_mapping": ontology_mapping,
             "_stage": 4,
         })
-
-    def run(self, term: str, nct_ids: list[str]) -> dict[str, Any]:
-        term = " ".join(str(term).split()).strip()
-        if not term:
-            return self._err(term, "Drug or therapy term cannot be empty.")
-        normalized_nct_ids = list(
-            dict.fromkeys(
-                str(nct_id).strip().upper()
-                for nct_id in nct_ids
-                if str(nct_id).strip()
-            )
-        )
-        if not normalized_nct_ids:
-            return self._err(term, "At least one valid NCT ID must be supplied.")
-        if self._candidate_extractor is None:
-            return self._err(
-                term,
-                "No LLM intervention-identity resolver is configured.",
-            )
-
-        fetched_trials: list[NCTDrugContext] = []
-        context_warnings: list[str] = []
-        for nct_id in normalized_nct_ids:
-            try:
-                raw = self._loader.fetch_study(nct_id)
-                trial = NCTDrugContext.from_api(raw)
-                fetched_trials.append(trial)
-                print(
-                    f"  [pipeline] {nct_id}: "
-                    f"{len(trial.interventions)} intervention(s) found.",
-                    flush=True,
-                )
-            except Exception as exc:
-                context_warnings.append(
-                    f"{nct_id}: failed to load or parse record: {exc}"
-                )
-        if not fetched_trials:
-            return self._err(
-                term,
-                "No NCT records could be loaded.",
-                context_warnings=context_warnings,
-            )
-
-        raw_identity_context = self._build_raw_intervention_context(fetched_trials)
-        extracted = self._candidate_extractor.extract(
-            term=term,
-            nct_ids=normalized_nct_ids,
-            context=raw_identity_context,
-        )
-
-        identity_matches = self._extract_identity_matches(extracted)
-
-        print(
-            "  [identity] raw extractor output: "
-            + (
-                repr(extracted.model_dump())
-                if isinstance(extracted, NCItIdentityResolution)
-                else repr(extracted)
-            ),
-            flush=True,
-        )
-        print(
-            "  [identity] normalized matches: "
-            f"{identity_matches!r}",
-            flush=True,
-        )
-
-        resolved_records = self._validate_identity_matches(
-            extracted=extracted,
-            trials=fetched_trials,
-        )
-
-        print(
-            "  [identity] validated matches: "
-            + ", ".join(
-                (
-                    f"{trial.nct_id}: "
-                    f"{intervention.name!r} "
-                    f"-> {match['search_term']!r}"
-                )
-                for trial, intervention, match in resolved_records
-            ),
-            flush=True,
-        )
-
-        if not resolved_records:
-            return self._err(
-                term,
-                "The requested intervention could not be resolved against the "
-                "NCT intervention records.",
-                identity_resolution=identity_matches,
-                context_warnings=context_warnings,
-            )
-
-        resolution_kind = self._resolution_kind(extracted)
-
-        # ── Role-based record filtering ───────────────────────────────────────
-        # Keep only records whose LLM-assigned role is appropriate for the
-        # declared resolution_kind.  This must run before definition_context
-        # is built so that co-intervention evidence is excluded from the
-        # definition generation prompt.
-        resolved_records = self._filter_resolved_records(
-            term=term,
-            resolution_kind=resolution_kind,
-            resolved_records=resolved_records,
-        )
-
-        if not resolved_records:
-            return self._err(
-                term,
-                "The requested intervention could not be isolated from other "
-                "trial interventions after role filtering.",
-                identity_resolution=identity_matches,
-                context_warnings=context_warnings,
-            )
-
-        # ── class_request fast-path ───────────────────────────────────────────
-        # The author term is a therapeutic-class description (e.g. "CD33
-        # directed therapy", "anti-HER2 agent").  The LLM has identified one
-        # exemplar drug from the trial record to anchor the NCIt lookup.
-        # Skip definition generation entirely and go straight to NCIt so we
-        # classify the class by its representative member's pharmacology.
-        if resolution_kind == "class_request":
-            class_search_terms = self._normalize_labels(
-                [match["search_term"] for _, _, match in resolved_records]
-            )
-            print(
-                f"  [ncit] class_request fast-path; searching NCIt for: "
-                + ", ".join(repr(t) for t in class_search_terms),
-                flush=True,
-            )
-            ncit_definition: str | None = None
-            ncit_search_term: str | None = None
-            ncit_code: str | None = None
-            ncit_preferred_name: str | None = None
-            for cst in class_search_terms:
-                result = self._try_ncit_term(cst)
-                if result is not None:
-                    ncit_definition, ncit_code, ncit_preferred_name = result
-                    ncit_search_term = cst
-                    break
-            if not ncit_definition:
-                return self._err(
-                    term,
-                    "class_request: could not find NCIt definition for "
-                    "any exemplar drug in the trial record.",
-                    context_warnings=context_warnings,
-                )
-            definition = ncit_definition
-            definition_source = "ncit_class_exemplar"
-            llm_definition = definition
-            ncit_component_concepts: list[dict[str, str]] = []
-            regimen_components: list[str] = []
-            resolved_search_terms = class_search_terms
-        else:
-            definition_context = self._build_resolved_context(resolved_records)
-            definition = self._definition_generator.generate(
-                term=term,
-                nct_ids=normalized_nct_ids,
-                context=definition_context,
-            )
-            if not definition or self._is_unknown_definition(definition):
-                return self._err(
-                    term,
-                    "Could not generate a definition.",
-                    context_warnings=context_warnings,
-                )
-
-            llm_definition = definition
-            definition_source = "llm"
-            ncit_search_term = None
-            ncit_code = None
-            ncit_preferred_name = None
-            ncit_component_concepts = []
-            regimen_components = []
-
-            resolved_search_terms = self._normalize_labels(
-                [
-                    match["search_term"]
-                    for _, _, match in resolved_records
-                ]
-            )
-
-        # ── Deterministic single-product downgrade ────────────────────────────
-        # Safety net: if the LLM still declared regimen but all surviving
-        # matches share the same search_term key as the author term, it is
-        # almost certainly a single product used inside a regimen trial.
-        # Filter_resolved_records above handles the role-based case; this
-        # handles the edge case where roles were set to combination_component
-        # but filtering still let them through (last-resort path).
-
-        if (
-            resolution_kind in {"regimen", "composite_product"}
-            and len(resolved_search_terms) > 1
-        ):
-            author_key = self._identity_key(term)
-            only_author_term = all(
-                self._identity_key(s) == author_key
-                for s in resolved_search_terms
-            )
-            if only_author_term:
-                print(
-                    "  [identity] downgraded regimen to single_product: all "
-                    "resolved search terms are aliases of the author term.",
-                    flush=True,
-                )
-                resolution_kind = "single_product"
-
-        # ── NCIt resolution branch ────────────────────────────────────────────
-        if (
-            resolution_kind in {"regimen", "composite_product"}
-            and len(resolved_search_terms) > 1
-        ):
-            regimen_components = resolved_search_terms
-            ncit_component_concepts = self._fetch_ncit_component_definitions(
-                regimen_components
-            )
-
-            resolved_component_keys = {
-                self._identity_key(concept["search_term"])
-                for concept in ncit_component_concepts
-            }
-            unresolved_components = [
-                component
-                for component in resolved_search_terms
-                if self._identity_key(component) not in resolved_component_keys
-            ]
-            # For composite_product, allow partial synthesis when at least 2
-            # out of N components are resolved — linkers/chelators like DOTA
-            # may lack NCIt definitions without affecting classification accuracy.
-            min_resolved = 2 if resolution_kind == "composite_product" else len(resolved_search_terms)
-            all_components_resolved = len(ncit_component_concepts) >= min_resolved
-
-            if not all_components_resolved:
-                print(
-                    "  [pipeline] incomplete NCIt component resolution; "
-                    "not synthesizing an NCIt-grounded multi-component "
-                    "definition. Unresolved: "
-                    + ", ".join(repr(c) for c in unresolved_components),
-                    flush=True,
-                )
-            else:
-                synthesized = self._generate_multi_component_definition(
-                    term=term,
-                    nct_ids=normalized_nct_ids,
-                    resolution_kind=resolution_kind,
-                    component_concepts=ncit_component_concepts,
-                    trial_context=definition_context,
-                    unresolved_components=unresolved_components or None,
-                )
-                if synthesized and not self._is_unknown_definition(synthesized):
-                    definition = synthesized
-                    definition_source = "ncit_components_plus_llm"
-        else:
-            # Build a flat, ordered list of NCIt search candidates.
-            #
-            # For each LLM-returned resolved search term, pre-expand it via
-            # _expand_ncit_variants so that composite alias terms like
-            # "LMP, BARF1 and EBNA1 specific CTLs" are split into individual
-            # top-level candidates ("LMP", "BARF1", "EBNA1 specific CTLs")
-            # before they reach _try_ncit_term.  Each top-level candidate is
-            # then a clean single-concept query, which avoids NCIt matching a
-            # multi-word phrase literally when the individual components are
-            # indexed separately.
-            #
-            # The original (unexpanded) term is kept first so that an exact
-            # NCIt match beats an expanded sub-term.
-            #
-            # A safety net of raw-term expansions is appended last so we
-            # don't miss e.g. "Avutometinib" when the user typed
-            # "Avutometinib (VS-6766)".
-            expanded_resolved: list[str] = []
-            for rst in resolved_search_terms:
-                expanded_resolved.append(rst)
-                for variant in self._expand_ncit_variants(rst):
-                    expanded_resolved.append(variant)
-
-            term_variants = self._expand_ncit_variants(term)
-            term_safety_net = (
-                [term, *term_variants] if not term_variants else term_variants
-            )
-            search_candidates = self._normalize_labels(
-                [*expanded_resolved, *term_safety_net]
-            )
-            print(
-                "  [ncit] single-product search order: "
-                + ", ".join(repr(c) for c in search_candidates),
-                flush=True,
-            )
-            for search_candidate in search_candidates:
-                result = self._try_ncit_term(search_candidate)
-                if result is None:
-                    continue
-                definition, ncit_code, ncit_preferred_name = result
-                ncit_search_term = search_candidate
-                definition_source = "ncit"
-                break
-
-        category_raw = self._category_suggester.suggest(definition=definition)
-        if not category_raw:
-            return self._err(
-                term,
-                "Therapeutic-category suggestion failed.",
-                definition=definition,
-                context_warnings=context_warnings,
-            )
-        try:
-            category_suggestion = TherapeuticCategorySuggestion.model_validate_json(
-                category_raw
-            )
-        except ValidationError as exc:
-            return self._err(
-                term,
-                f"Therapeutic-category suggestion validation failed: {exc}",
-                definition=definition,
-                category_raw=category_raw,
-                context_warnings=context_warnings,
-            )
-
-        category_labels = category_suggestion.model_dump()
-        category_context = json.dumps(
-            {
-                **category_labels,
-                "retrieval_scope": (
-                    "The candidate hierarchy contains functional therapeutic "
-                    "and pharmacological drug categories."
-                ),
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        labels = self._normalize_labels(
-            [
-                category_labels["specific_category"],
-                category_labels["broad_category"],
-                category_labels["root_category"],
-            ]
-        )
-        if not labels:
-            # The definition alone didn't support a functional category label.
-            # Fall back to retrieving directly with the term and, when available,
-            # the NCIt preferred name, so that the ontology mapper can still find
-            # a match (e.g. a radiopharmaceutical whose NCIt definition is purely
-            # physical/nuclear, or a vaccine whose NCIt entry resolves to a disease).
-            fallback_label_candidates = [term]
-            if ncit_preferred_name and ncit_preferred_name.casefold() != term.casefold():
-                fallback_label_candidates.append(ncit_preferred_name)
-            print(
-                "  [pipeline] no functional category labels from definition; "
-                f"falling back to term-name retrieval "
-                f"({', '.join(repr(l) for l in fallback_label_candidates)}).",
-                flush=True,
-            )
-            labels = self._normalize_labels(fallback_label_candidates)
-        candidates = self._retriever.retrieve_for_labels(
-            labels=labels,
-            per_label_k=20,
-            final_k=20,
-        )
-        if not candidates:
-            return self._err(
-                term,
-                "Qdrant retrieval returned no candidates.",
-                definition=definition,
-                category_labels=category_labels,
-                context_warnings=context_warnings,
-            )
-        mapping_raw = self._ontology_mapper.map(
-            definition=definition,
-            superclass=category_context,
-            candidates=candidates,
-        )
-        if not mapping_raw:
-            return self._err(
-                term,
-                "Ontology mapping failed.",
-                definition=definition,
-                category_labels=category_labels,
-                context_warnings=context_warnings,
-            )
-        try:
-            internal_mapping = InternalOntologyMapping.model_validate_json(
-                mapping_raw
-            )
-        except ValidationError as exc:
-            return self._err(
-                term,
-                f"Ontology mapping validation failed: {exc}",
-                definition=definition,
-                category_labels=category_labels,
-                mapping_raw=mapping_raw,
-                context_warnings=context_warnings,
-            )
-        ontology_mapping = self._validate_internal_mapping(
-            internal_mapping=internal_mapping,
-            candidates=candidates,
-        )
-        return {
-            "term": term,
-            "normalized_term": self._identity_key(term),
-            "nct_ids": normalized_nct_ids,
-            "definition": definition,
-            "definition_source": definition_source,
-            "ncit_search_term": ncit_search_term,
-            "ncit_code": ncit_code,
-            "ncit_preferred_name": ncit_preferred_name,
-            "ncit_component_concepts": ncit_component_concepts,
-            "regimen_components": regimen_components,
-            "identity_resolution": identity_matches,
-            "resolved_search_terms": resolved_search_terms,
-            "llm_definition": llm_definition,
-            "category_labels": category_labels,
-            "superclass_labels": category_labels,
-            "candidates": candidates,
-            "ontology_mapping": ontology_mapping,
-            "context_warnings": context_warnings,
-        }

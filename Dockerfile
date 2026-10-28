@@ -55,7 +55,11 @@ RUN uv pip install \
         "httpx" \
         "sse-starlette>=1.6.5" \
         "huggingface-hub>=0.24" \
-        "openpyxl>=3.1.5"
+        "openpyxl>=3.1.5" \
+        "python-jose[cryptography]>=3.3.0" \
+        "argon2-cffi>=23.1.0" \
+        "asyncpg>=0.30" \
+        "python-multipart>=0.0.18"
 
 
 # ============================================================================
@@ -63,14 +67,15 @@ RUN uv pip install \
 # ============================================================================
 FROM node:22-slim AS frontend
 
-WORKDIR /build
+WORKDIR /build/react
 
 # Install frontend dependencies from the lockfile first for better layer caching.
-COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/react/package.json frontend/react/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
-# Build the SPA. vite.config.js emits the bundle to dist/.
-COPY frontend/ ./
+# Build the SPA. vite.config.ts emits the bundle to ../dist, so the runtime
+# stage can keep copying /build/dist.
+COPY frontend/react/ ./
 RUN npm run build
 
 

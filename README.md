@@ -11,7 +11,7 @@ The repository contains three parts:
 
 | Part | Location | Purpose |
 |---|---|---|
-| Web UI | `frontend/` | Vue 3 + Vite single-page app |
+| Web UI | `frontend/` | React + Vite single-page app |
 | API + pipeline | `src/` | FastAPI server, retrieval, LLM orchestration |
 | One-off scripts | `scripts/` | Model download + Qdrant population |
 

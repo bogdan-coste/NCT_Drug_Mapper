@@ -7,18 +7,6 @@ from ..vectordb.vector_store import VectorStore
 
 
 class OntologyRetriever:
-    """
-    Shared SapBERT/Qdrant retriever for one configured ontology axis.
-
-    Each retrieval query produces an independent ranking. Rankings are fused
-    through Reciprocal Rank Fusion, exact display-name matches receive a
-    deterministic bonus, and the highest-ranked candidates can be enriched
-    with direct parents and children.
-
-    Axis filtering is applied defensively from each Qdrant payload using
-    ``app_drug_category``. The value may be stored either at payload root or
-    under ``metadata``.
-    """
 
     def __init__(
         self,
@@ -146,7 +134,7 @@ class OntologyRetriever:
         if enrich_top_n < 0:
             raise ValueError("enrich_top_n cannot be negative.")
 
-    def _search_axis_hits(
+    async def _search_axis_hits(
         self,
         vector: list[float],
         desired_k: int,
@@ -163,7 +151,7 @@ class OntologyRetriever:
             desired_k,
             desired_k * self._search_oversample_factor,
         )
-        hits = self._store.search(vector=vector, top_k=search_k)
+        hits = await self._store.search(vector=vector, top_k=search_k)
 
         filtered: list[Any] = []
         for hit in hits:
@@ -175,15 +163,15 @@ class OntologyRetriever:
 
         return filtered
 
-    def retrieve(self, term: str, top_k: int = 20) -> list[str]:
+    async def retrieve(self, term: str, top_k: int = 20) -> list[str]:
         """Return top ontology names for one query on this retriever axis."""
         query = self._clean_text(term)
 
         if not query or top_k <= 0:
             return []
 
-        vector = self._embedder.embed_one(query)
-        hits = self._search_axis_hits(vector=vector, desired_k=top_k)
+        vector = await self._embedder.embed_one(query)
+        hits = await self._search_axis_hits(vector=vector, desired_k=top_k)
 
         names: list[str] = []
         seen: set[str] = set()
@@ -201,7 +189,7 @@ class OntologyRetriever:
 
         return names[:top_k]
 
-    def retrieve_for_labels(
+    async def retrieve_for_labels(
         self,
         labels: list[str],
         per_label_k: int = 20,
@@ -256,14 +244,14 @@ class OntologyRetriever:
                 f"embedding query: {label!r}",
                 flush=True,
             )
-            vector = self._embedder.embed_one(label)
+            vector = await self._embedder.embed_one(label)
             print(
                 f"  [retriever:{self._app_drug_category}] "
                 f"vector dim: {len(vector)}, searching Qdrant...",
                 flush=True,
             )
 
-            hits = self._search_axis_hits(
+            hits = await self._search_axis_hits(
                 vector=vector,
                 desired_k=per_label_k,
             )
@@ -384,7 +372,7 @@ class OntologyRetriever:
             related_object_names.extend(parent_ids.get(key, []))
             related_object_names.extend(child_ids.get(key, []))
 
-        related = self._store.fetch_by_object_names(
+        related = await self._store.fetch_by_object_names(
             list(dict.fromkeys(related_object_names))
         )
 
@@ -467,22 +455,5 @@ class TherapeuticCategoryRetriever(OntologyRetriever):
             embedder=embedder,
             vector_store=vector_store,
             app_drug_category="therapeutic category",
-            search_oversample_factor=search_oversample_factor,
-        )
-
-
-class DrugClassRetriever(OntologyRetriever):
-    """Retriever restricted to the molecular/compositional drug-class axis."""
-
-    def __init__(
-        self,
-        embedder: SapBERTEmbedder,
-        vector_store: VectorStore,
-        search_oversample_factor: int = 5,
-    ) -> None:
-        super().__init__(
-            embedder=embedder,
-            vector_store=vector_store,
-            app_drug_category="drug class",
             search_oversample_factor=search_oversample_factor,
         )
